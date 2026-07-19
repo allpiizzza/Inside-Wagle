@@ -15,9 +15,43 @@ function setCors(res) {
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 }
 
+function extractTeamName(prop, teamNameMap) {
+    if (!prop) return null;
+    if (prop.type === 'select') return prop.select?.name || null;
+    if (prop.type === 'status') return prop.status?.name || null;
+    if (prop.type === 'relation') {
+        const id = prop.relation?.[0]?.id;
+        return id ? (teamNameMap?.[id] || null) : null;
+    }
+    return null;
+}
+
+// '팀'이 관계형일 때, 연결된 페이지들의 제목(=팀 이름)을 가져와 {pageId: 이름} 맵으로 만듦
+async function resolveRelationTitles(headers, pages, propName) {
+    const idsNeeded = new Set();
+    pages.forEach((page) => {
+        const prop = page.properties[propName];
+        if (prop?.type === 'relation') {
+            prop.relation.forEach((r) => idsNeeded.add(r.id));
+        }
+    });
+    const map = {};
+    await Promise.all(
+        [...idsNeeded].map(async (id) => {
+            const resp = await fetch(`https://api.notion.com/v1/pages/${id}`, { headers });
+            const data = await resp.json();
+            if (resp.ok) {
+                const titleProp = Object.values(data.properties || {}).find((p) => p.type === 'title');
+                map[id] = titleProp?.title?.[0]?.plain_text || null;
+            }
+        })
+    );
+    return map;
+}
+
 async function fetchWaglerMap(headers, waglerDbId) {
     // pageId -> { name, team }
-    const map = {};
+    const allPages = [];
     let cursor = undefined;
     do {
         const response = await fetch(`https://api.notion.com/v1/databases/${waglerDbId}/query`, {
@@ -27,14 +61,19 @@ async function fetchWaglerMap(headers, waglerDbId) {
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message || '와글러 DB 조회 실패');
-        data.results.forEach((page) => {
-            map[page.id] = {
-                name: page.properties['와글러']?.title?.[0]?.plain_text || '이름없음',
-                team: page.properties['팀']?.select?.name || null,
-            };
-        });
+        allPages.push(...data.results);
         cursor = data.has_more ? data.next_cursor : undefined;
     } while (cursor);
+
+    const teamNameMap = await resolveRelationTitles(headers, allPages, '팀');
+
+    const map = {};
+    allPages.forEach((page) => {
+        map[page.id] = {
+            name: page.properties['와글러']?.title?.[0]?.plain_text || '이름없음',
+            team: extractTeamName(page.properties['팀'], teamNameMap),
+        };
+    });
     return map;
 }
 

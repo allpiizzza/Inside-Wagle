@@ -34,21 +34,59 @@ async function fetchQuestPointsMap(headers, questDbId) {
     return map;
 }
 
-async function findWaglerPage(headers, waglerDbId, name, team) {
-    const andFilters = [
-        { property: '와글러', title: { equals: name } },
-    ];
-    if (team) {
-        andFilters.push({ property: '팀', select: { equals: team } });
+function extractTeamName(prop, teamNameMap) {
+    if (!prop) return null;
+    if (prop.type === 'select') return prop.select?.name || null;
+    if (prop.type === 'status') return prop.status?.name || null;
+    if (prop.type === 'relation') {
+        const id = prop.relation?.[0]?.id;
+        return id ? (teamNameMap?.[id] || null) : null;
     }
+    return null;
+}
+
+// '팀'이 관계형일 때, 연결된 페이지들의 제목(=팀 이름)을 가져와 {pageId: 이름} 맵으로 만듦
+async function resolveRelationTitles(headers, pages, propName) {
+    const idsNeeded = new Set();
+    pages.forEach((page) => {
+        const prop = page.properties[propName];
+        if (prop?.type === 'relation') {
+            prop.relation.forEach((r) => idsNeeded.add(r.id));
+        }
+    });
+    const map = {};
+    await Promise.all(
+        [...idsNeeded].map(async (id) => {
+            const resp = await fetch(`https://api.notion.com/v1/pages/${id}`, { headers });
+            const data = await resp.json();
+            if (resp.ok) {
+                const titleProp = Object.values(data.properties || {}).find((p) => p.type === 'title');
+                map[id] = titleProp?.title?.[0]?.plain_text || null;
+            }
+        })
+    );
+    return map;
+}
+
+async function findWaglerPage(headers, waglerDbId, name, team) {
+    // 팀 속성이 select/status/관계형 어느 쪽이든 안전하게 동작하도록, Notion 필터는 이름으로만 걸고
+    // 팀 일치 여부는 받아온 결과에서 JS로 다시 확인해요.
     const response = await fetch(`https://api.notion.com/v1/databases/${waglerDbId}/query`, {
         method: 'POST',
         headers,
-        body: JSON.stringify({ filter: { and: andFilters }, page_size: 1 }),
+        body: JSON.stringify({
+            filter: { property: '와글러', title: { equals: name } },
+            page_size: 5,
+        }),
     });
     const data = await response.json();
     if (!response.ok) throw new Error(data.message || '와글러 DB 조회 실패');
-    return data.results[0] || null;
+
+    if (!team) return data.results[0] || null;
+
+    const teamNameMap = await resolveRelationTitles(headers, data.results, '팀');
+    const matched = data.results.find((page) => extractTeamName(page.properties['팀'], teamNameMap) === team);
+    return matched || data.results[0] || null;
 }
 
 function extractWeeks(page, questPointsMap) {
@@ -97,11 +135,12 @@ export default async function handler(req, res) {
             const weeks = extractWeeks(page, questPointsMap);
             const mayPoints = page.properties['5월 포인트']?.number ?? 0;
             const totalScore = mayPoints + weeks.reduce((sum, w) => sum + w.points, 0);
+            const teamNameMap = await resolveRelationTitles(headers, [page], '팀');
 
             return res.status(200).json({
                 pageId: page.id,
                 name: page.properties['와글러']?.title?.[0]?.plain_text || name,
-                team: page.properties['팀']?.select?.name || null,
+                team: extractTeamName(page.properties['팀'], teamNameMap),
                 mayPoints,
                 weeks,
                 totalScore,
