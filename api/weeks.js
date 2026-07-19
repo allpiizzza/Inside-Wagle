@@ -18,6 +18,7 @@ export default async function handler(req, res) {
         res.setHeader('Allow', ['GET', 'OPTIONS']);
         return res.status(405).json({ error: `허용되지 않는 메서드: ${req.method}` });
     }
+    res.setHeader('Cache-Control', 's-maxage=600, stale-while-revalidate=59');
 
     const NOTION_TOKEN = process.env.NOTION_TOKEN;
     const WAGLER_DB_ID = process.env.NOTION_WAGLER_DB_ID;
@@ -39,7 +40,7 @@ export default async function handler(req, res) {
         }
 
         const weeks = Object.entries(data.properties)
-            .filter(([, prop]) => prop.type === 'relation')
+            .filter(([name, prop]) => prop.type === 'relation' && name.includes('주차'))
             .map(([name]) => name);
 
         return res.status(200).json(weeks);

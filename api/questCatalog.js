@@ -17,6 +17,7 @@ export default async function handler(req, res) {
         res.setHeader('Allow', ['GET', 'OPTIONS']);
         return res.status(405).json({ error: `허용되지 않는 메서드: ${req.method}` });
     }
+    res.setHeader('Cache-Control', 's-maxage=120, stale-while-revalidate=59');
 
     const NOTION_TOKEN = process.env.NOTION_TOKEN;
     const QUEST_DB_ID = process.env.NOTION_QUEST_DB_ID;
@@ -34,6 +35,7 @@ export default async function handler(req, res) {
     try {
         const results = [];
         let cursor = undefined;
+        const activeOnly = req.query.active === 'true';
 
         // 100개 넘을 수도 있으니 페이지네이션 처리
         do {
@@ -43,6 +45,7 @@ export default async function handler(req, res) {
                 body: JSON.stringify({
                     page_size: 100,
                     start_cursor: cursor,
+                    ...(activeOnly ? { filter: { property: '현재진행여부', checkbox: { equals: true } } } : {}),
                 }),
             });
             const data = await response.json();
@@ -56,7 +59,7 @@ export default async function handler(req, res) {
         const quests = results.map((page) => ({
             id: page.id,
             name: page.properties['퀘스트']?.title?.[0]?.plain_text || '이름없음',
-            active: page.properties['현재진행여부']?.checkbox ?? false,
+            active: page.properties['현재 진행중']?.checkbox ?? false,
             condition: page.properties['달성조건']?.rich_text?.[0]?.plain_text || '',
             points: page.properties['점수']?.number ?? 0,
         }));

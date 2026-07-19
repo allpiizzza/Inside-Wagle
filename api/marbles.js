@@ -135,7 +135,7 @@ export default async function handler(req, res) {
                 const wagler = waglerId ? waglerMap[waglerId] : null;
                 return {
                     id: page.id,
-                    title: page.properties['제목']?.title?.[0]?.plain_text || '무제의 기억',
+                    title: page.properties['책 제목']?.title?.[0]?.plain_text || '무제의 기억',
                     name: wagler?.name || '알 수 없음',
                     team: wagler?.team || null,
                     emotions: (page.properties['감정']?.multi_select || []).map((e) => e.name),
@@ -167,7 +167,7 @@ export default async function handler(req, res) {
                 body: JSON.stringify({
                     parent: { database_id: DATABASE_ID },
                     properties: {
-                        제목: { title: [{ text: { content: (title || '무제의 기억').slice(0, 100) } }] },
+                        '책 제목': { title: [{ text: { content: (title || '무제의 기억').slice(0, 100) } }] },
                         와글러: { relation: [{ id: waglerPage.id }] },
                         감정: { multi_select: emotions.map((e) => ({ name: e })) },
                     },

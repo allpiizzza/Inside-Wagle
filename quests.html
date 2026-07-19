@@ -236,18 +236,24 @@
     const API_CATALOG = '/api/questCatalog';
     const API_WEEKS = '/api/weeks';
 
-    let questCatalog = []; // [{id, name, active, condition, points}]
+    // (퀘스트 목록은 loadActiveQuests/loadCatalog가 각자 필요한 형태로 따로 불러와요)
 
-    function renderQuestOptions() {
+    async function loadActiveQuests() {
         const select = document.getElementById('qQuest');
-        const active = questCatalog.filter(q => q.active);
-        select.innerHTML = '<option value="" disabled selected>퀘스트를 선택하세요</option>' +
-            active.map(q => `<option value="${q.id}" data-points="${q.points}">${q.name} (+${q.points}점)</option>`).join('');
-        select.addEventListener('change', () => {
-            const opt = select.options[select.selectedIndex];
-            const points = opt?.dataset?.points;
-            document.getElementById('qPointsDisplay').innerText = points ? `이 퀘스트는 +${points}점이에요` : '';
-        });
+        try {
+            const response = await fetch(`${API_CATALOG}?active=true`);
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || '불러오기 실패');
+            select.innerHTML = '<option value="" disabled selected>퀘스트를 선택하세요</option>' +
+                data.map(q => `<option value="${q.id}" data-points="${q.points}">${q.name} (+${q.points}점)</option>`).join('');
+            select.addEventListener('change', () => {
+                const opt = select.options[select.selectedIndex];
+                const points = opt?.dataset?.points;
+                document.getElementById('qPointsDisplay').innerText = points ? `이 퀘스트는 +${points}점이에요` : '';
+            });
+        } catch (err) {
+            select.innerHTML = '<option value="" disabled selected>불러오기 실패</option>';
+        }
     }
 
     async function loadCatalog() {
@@ -256,8 +262,6 @@
             const response = await fetch(API_CATALOG);
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || '불러오기 실패');
-            questCatalog = data;
-            renderQuestOptions();
 
             const sorted = [...data].sort((a, b) => (b.active - a.active));
             body.innerHTML = sorted.map(q => `
@@ -271,7 +275,6 @@
             `).join('');
         } catch (err) {
             body.innerText = `불러오기 실패: ${err.message}`;
-            document.getElementById('qQuest').innerHTML = '<option value="" disabled selected>불러오기 실패</option>';
         }
     }
 
@@ -413,6 +416,7 @@
         }
     }
 
+    loadActiveQuests();
     loadCatalog();
     loadWeeks();
     loadWaglerList();

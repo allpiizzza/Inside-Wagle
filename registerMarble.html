@@ -223,8 +223,19 @@
     <div class="subtitle">감정을 고르고 구슬을 제조하세요!</div>
 
     <div class="name-input-container">
+        <select id="filterTeam" class="name-input" onchange="renderWaglerOptions()">
+            <option value="" disabled selected>👥 팀을 선택하세요</option>
+            <option value="생글이팀">💛 생글이팀</option>
+            <option value="새침이팀">💚 새침이팀</option>
+            <option value="포근이팀">💙 포근이팀</option>
+            <option value="중심이팀">💜 중심이팀</option>
+            <option value="불끈이팀">❤️ 불끈이팀</option>
+        </select>
+    </div>
+
+    <div class="name-input-container">
         <select id="userName" class="name-input">
-            <option value="" disabled selected>불러오는 중...</option>
+            <option value="" disabled selected>먼저 팀을 선택하세요</option>
         </select>
     </div>
 
@@ -493,31 +504,44 @@
         }
     }
 
-    // 와글러 DB에서 명단(이름+팀) 불러와 드롭다운 채우기
-    async function loadWaglerOptions() {
-        const select = document.getElementById('userName');
+    let waglerList = []; // [{id, name, team}]
+
+    // 와글러 DB에서 명단(이름+팀) 불러와 캐싱해두기
+    async function loadWaglerList() {
         try {
             const response = await fetch('/api/waglerList');
-            const waglers = await response.json();
-            if (!response.ok) throw new Error(waglers.error || '명단 불러오기 실패');
-
-            const teams = [...new Set(waglers.map(w => w.team).filter(Boolean))];
-            const noTeam = waglers.filter(w => !w.team);
-
-            select.innerHTML = '<option value="" disabled selected>이름을 선택하세요</option>' +
-                teams.map(team => `
-                    <optgroup label="${team}">
-                        ${waglers.filter(w => w.team === team).map(w => `<option value="${w.name}">${w.name}</option>`).join('')}
-                    </optgroup>
-                `).join('') +
-                (noTeam.length ? `<optgroup label="팀 미정">${noTeam.map(w => `<option value="${w.name}">${w.name}</option>`).join('')}</optgroup>` : '');
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || '명단 불러오기 실패');
+            waglerList = data;
+            if (document.getElementById('filterTeam').value) {
+                renderWaglerOptions();
+            }
         } catch (err) {
-            select.innerHTML = '<option value="" disabled selected>명단을 불러오지 못했어요</option>';
+            waglerList = [];
+            document.getElementById('userName').innerHTML = '<option value="" disabled selected>명단을 불러오지 못했어요</option>';
+        }
+    }
+
+    function renderWaglerOptions() {
+        const team = document.getElementById('filterTeam').value;
+        const select = document.getElementById('userName');
+
+        if (!team) {
+            select.innerHTML = '<option value="" disabled selected>먼저 팀을 선택하세요</option>';
+            return;
+        }
+
+        const members = waglerList.filter(w => w.team === team);
+        select.innerHTML = '<option value="" disabled selected>이름을 선택하세요</option>' +
+            members.map(w => `<option value="${w.name}">${w.name}</option>`).join('');
+
+        if (!members.length) {
+            select.innerHTML = '<option value="" disabled selected>이 팀에 등록된 와글러가 없어요</option>';
         }
     }
 
     window.onload = () => {
-        loadWaglerOptions();
+        loadWaglerList();
         loadStorage();
     };
 </script>

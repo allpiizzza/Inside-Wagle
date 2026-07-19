@@ -92,7 +92,7 @@ async function findWaglerPage(headers, waglerDbId, name, team) {
 function extractWeeks(page, questPointsMap) {
     const weeks = [];
     for (const [propName, prop] of Object.entries(page.properties)) {
-        if (prop.type !== 'relation') continue;
+        if (prop.type !== 'relation' || !propName.includes('주차')) continue;
         const questIds = prop.relation.map((r) => r.id);
         const questNames = questIds.map((id) => questPointsMap[id]?.name || '(삭제된 퀘스트)');
         const weekPoints = questIds.reduce((sum, id) => sum + (questPointsMap[id]?.points || 0), 0);
