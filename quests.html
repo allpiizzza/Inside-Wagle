@@ -1,0 +1,422 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>퀘스트 인증 - 인사이드 와글</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #fdfbf7;
+            color: #37352f;
+            padding: 15px;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        .card {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid #edece9;
+            width: 100%;
+            max-width: 420px;
+            box-sizing: border-box;
+        }
+        h3 {
+            margin-top: 0;
+            margin-bottom: 5px;
+            text-align: center;
+            font-size: 16px;
+            color: #222;
+        }
+        .subtitle {
+            font-size: 12px;
+            color: #888;
+            text-align: center;
+            margin-bottom: 18px;
+        }
+        .back-link {
+            font-size: 12px;
+            color: #888;
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 4px;
+        }
+        .field { margin-bottom: 14px; }
+        .field label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            color: #555;
+            margin-bottom: 6px;
+        }
+        .field input[type="text"],
+        .field select {
+            width: 100%;
+            border: 1.5px solid #edece9;
+            border-radius: 8px;
+            padding: 9px 10px;
+            font-size: 14px;
+            font-family: inherit;
+            color: #222;
+            box-sizing: border-box;
+            background: #fff;
+        }
+        .field input[type="text"]:focus,
+        .field select:focus {
+            outline: none;
+            border-color: #6c5ce7;
+        }
+        .quest-points {
+            font-size: 12px;
+            font-weight: 700;
+            color: #6c5ce7;
+            margin-top: 4px;
+        }
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.2s;
+        }
+        .btn-primary { background: #6c5ce7; color: #fff; }
+        .btn-secondary { background: #37352f; color: #fff; }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .status-msg {
+            font-size: 12px;
+            color: #aaa;
+            text-align: center;
+            padding: 8px 0;
+        }
+        .status-msg.error { color: #c0392b; }
+        .status-msg.ok { color: #2c7a2c; }
+
+        .my-summary { display: none; }
+        .my-summary.visible { display: block; }
+        .score-box {
+            background: #f6f3ff;
+            border-radius: 12px;
+            padding: 14px;
+            text-align: center;
+            margin-bottom: 16px;
+        }
+        .score-box .score-name { font-size: 12px; color: #6c5ce7; font-weight: 700; }
+        .score-box .score-total { font-size: 28px; font-weight: 800; color: #37352f; margin-top: 2px; }
+
+        .week-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 11px;
+        }
+        .week-table td {
+            padding: 4px 2px;
+            border-bottom: 1px dashed #f1f0ed;
+            color: #666;
+        }
+        .week-table td.pt { text-align: right; color: #6c5ce7; font-weight: 700; }
+
+        .catalog {
+            border: 1.5px solid #edece9;
+            border-radius: 10px;
+            overflow: hidden;
+        }
+        .catalog summary {
+            padding: 10px 12px;
+            font-size: 13px;
+            font-weight: 700;
+            color: #444;
+            cursor: pointer;
+            background: #faf9f6;
+            list-style: none;
+        }
+        .catalog summary::-webkit-details-marker { display: none; }
+        .catalog summary::after { content: '▾'; float: right; color: #aaa; }
+        .catalog[open] summary::after { content: '▴'; }
+        .catalog-body {
+            padding: 4px 12px 10px 12px;
+            max-height: 320px;
+            overflow-y: auto;
+        }
+        .catalog-item {
+            font-size: 12px;
+            color: #555;
+            padding: 7px 0;
+            border-bottom: 1px dashed #f1f0ed;
+        }
+        .catalog-item .row1 { display: flex; justify-content: space-between; }
+        .catalog-item .pt { color: #6c5ce7; font-weight: 700; white-space: nowrap; margin-left: 8px; }
+        .catalog-item .cond { font-size: 11px; color: #999; margin-top: 2px; }
+        .catalog-item.inactive .name::after {
+            content: ' (종료됨)';
+            font-size: 10px;
+            color: #bbb;
+            font-weight: 400;
+        }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <a class="back-link" href="index.html">← 메인으로</a>
+    <h3>🎯 퀘스트 인증하기</h3>
+    <div class="subtitle">✋ 별도 검토 없이 서로 믿고 진행하는 룰이에요</div>
+
+    <div class="field">
+        <label>1. 팀</label>
+        <select id="qTeam" onchange="renderWaglerOptions()">
+            <option value="" disabled selected>👥 팀을 선택하세요</option>
+            <option value="생글이팀">💛 생글이팀</option>
+            <option value="새침이팀">💚 새침이팀</option>
+            <option value="포근이팀">💙 포근이팀</option>
+            <option value="중심이팀">💜 중심이팀</option>
+            <option value="불끈이팀">❤️ 불끈이팀</option>
+        </select>
+    </div>
+
+    <div class="field">
+        <label>2. 와글러 이름</label>
+        <select id="qName">
+            <option value="" disabled selected>먼저 팀을 선택하세요</option>
+        </select>
+    </div>
+
+    <div class="field">
+        <label>3. 퀘스트</label>
+        <select id="qQuest">
+            <option value="" disabled selected>불러오는 중...</option>
+        </select>
+        <div class="quest-points" id="qPointsDisplay"></div>
+    </div>
+
+    <div class="field">
+        <label>4. 주차</label>
+        <select id="qWeek">
+            <option value="" disabled selected>불러오는 중...</option>
+        </select>
+    </div>
+
+    <button id="qSubmitBtn" class="btn btn-primary" onclick="submitQuest()">인증 제출하기 🚀</button>
+    <div id="qSubmitStatus" class="status-msg"></div>
+</div>
+
+<div class="card">
+    <h3>📊 내 점수 확인</h3>
+    <div class="subtitle">위에서 팀/이름을 입력했다면 그대로 불러올 수 있어요</div>
+    <button id="wLoadBtn" class="btn btn-secondary" onclick="loadMyScore()">내 점수 불러오기</button>
+    <div id="wLoadStatus" class="status-msg"></div>
+
+    <div class="my-summary" id="mySummary" style="margin-top: 16px;">
+        <div class="score-box">
+            <div class="score-name" id="sName"></div>
+            <div class="score-total" id="sTotal">0점</div>
+        </div>
+        <table class="week-table" id="weekTable"></table>
+    </div>
+</div>
+
+<div class="card">
+    <h3>📜 퀘스트 전체 목록</h3>
+    <details class="catalog">
+        <summary>진행 중 / 종료된 퀘스트 다 보기</summary>
+        <div class="catalog-body" id="catalogBody">불러오는 중...</div>
+    </details>
+</div>
+
+<script>
+    const API_WAGLER = '/api/wagler';
+    const API_CATALOG = '/api/questCatalog';
+    const API_WEEKS = '/api/weeks';
+
+    let questCatalog = []; // [{id, name, active, condition, points}]
+
+    function renderQuestOptions() {
+        const select = document.getElementById('qQuest');
+        const active = questCatalog.filter(q => q.active);
+        select.innerHTML = '<option value="" disabled selected>퀘스트를 선택하세요</option>' +
+            active.map(q => `<option value="${q.id}" data-points="${q.points}">${q.name} (+${q.points}점)</option>`).join('');
+        select.addEventListener('change', () => {
+            const opt = select.options[select.selectedIndex];
+            const points = opt?.dataset?.points;
+            document.getElementById('qPointsDisplay').innerText = points ? `이 퀘스트는 +${points}점이에요` : '';
+        });
+    }
+
+    async function loadCatalog() {
+        const body = document.getElementById('catalogBody');
+        try {
+            const response = await fetch(API_CATALOG);
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || '불러오기 실패');
+            questCatalog = data;
+            renderQuestOptions();
+
+            const sorted = [...data].sort((a, b) => (b.active - a.active));
+            body.innerHTML = sorted.map(q => `
+                <div class="catalog-item ${q.active ? '' : 'inactive'}">
+                    <div class="row1">
+                        <span class="name">${q.name}</span>
+                        <span class="pt">+${q.points}점</span>
+                    </div>
+                    ${q.condition ? `<div class="cond">${q.condition}</div>` : ''}
+                </div>
+            `).join('');
+        } catch (err) {
+            body.innerText = `불러오기 실패: ${err.message}`;
+            document.getElementById('qQuest').innerHTML = '<option value="" disabled selected>불러오기 실패</option>';
+        }
+    }
+
+    async function loadWeeks() {
+        const select = document.getElementById('qWeek');
+        try {
+            const response = await fetch(API_WEEKS);
+            const weeks = await response.json();
+            if (!response.ok) throw new Error(weeks.error || '불러오기 실패');
+            select.innerHTML = '<option value="" disabled selected>주차를 선택하세요</option>' +
+                weeks.map(w => `<option value="${w}">${w}</option>`).join('');
+        } catch (err) {
+            select.innerHTML = '<option value="" disabled selected>불러오기 실패</option>';
+        }
+    }
+
+    async function submitQuest() {
+        const teamInput = document.getElementById('qTeam');
+        const nameInput = document.getElementById('qName');
+        const questSelect = document.getElementById('qQuest');
+        const weekSelect = document.getElementById('qWeek');
+        const btn = document.getElementById('qSubmitBtn');
+        const status = document.getElementById('qSubmitStatus');
+
+        const team = teamInput.value;
+        const name = nameInput.value.trim();
+        const questId = questSelect.value;
+        const week = weekSelect.value;
+
+        if (!team) { alert('팀을 선택해주세요!'); teamInput.focus(); return; }
+        if (!name) { alert('와글러 이름을 입력해주세요!'); nameInput.focus(); return; }
+        if (!questId) { alert('퀘스트를 선택해주세요!'); questSelect.focus(); return; }
+        if (!week) { alert('주차를 선택해주세요!'); weekSelect.focus(); return; }
+
+        btn.disabled = true;
+        btn.innerText = '제출 중...';
+        status.className = 'status-msg';
+        status.innerText = '';
+
+        try {
+            const response = await fetch(API_WAGLER, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ name, team, week, questId }),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || '제출에 실패했어요.');
+
+            if (data.alreadyExists) {
+                status.className = 'status-msg';
+                status.innerText = '이미 이 주차에 인증된 퀘스트예요.';
+            } else {
+                status.className = 'status-msg ok';
+                status.innerText = '인증 완료! ✅';
+            }
+
+            // 방금 인증한 사람 점수가 바로 보이도록 자동 갱신
+            if (document.getElementById('mySummary').classList.contains('visible')) {
+                loadMyScore();
+            }
+        } catch (err) {
+            status.className = 'status-msg error';
+            status.innerText = err.message;
+        } finally {
+            btn.disabled = false;
+            btn.innerText = '인증 제출하기 🚀';
+        }
+    }
+
+    async function loadMyScore() {
+        const team = document.getElementById('qTeam').value;
+        const name = document.getElementById('qName').value.trim();
+        const btn = document.getElementById('wLoadBtn');
+        const status = document.getElementById('wLoadStatus');
+        const summary = document.getElementById('mySummary');
+
+        if (!name) { alert('위에서 이름을 먼저 입력해주세요!'); return; }
+
+        btn.disabled = true;
+        btn.innerText = '불러오는 중...';
+        status.className = 'status-msg';
+        status.innerText = '';
+
+        try {
+            const params = new URLSearchParams({ name });
+            if (team) params.set('team', team);
+            const response = await fetch(`${API_WAGLER}?${params.toString()}`);
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || '조회 실패');
+
+            document.getElementById('sName').innerText = `${data.name} · ${data.team || '팀 미정'}`;
+            document.getElementById('sTotal').innerText = `${data.totalScore}점`;
+            document.getElementById('weekTable').innerHTML = `
+                <tr><td>5월 포인트</td><td class="pt">+${data.mayPoints}점</td></tr>
+                ${data.weeks.map(w => `<tr><td>${w.name}</td><td class="pt">+${w.points}점</td></tr>`).join('')}
+            `;
+            summary.classList.add('visible');
+        } catch (err) {
+            status.className = 'status-msg error';
+            status.innerText = err.message;
+            summary.classList.remove('visible');
+        } finally {
+            btn.disabled = false;
+            btn.innerText = '내 점수 불러오기';
+        }
+    }
+
+    let waglerList = []; // [{id, name, team}]
+
+    async function loadWaglerList() {
+        try {
+            const response = await fetch('/api/waglerList');
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || '명단 불러오기 실패');
+            waglerList = data;
+            if (document.getElementById('qTeam').value) {
+                renderWaglerOptions();
+            }
+        } catch (err) {
+            waglerList = [];
+        }
+    }
+
+    function renderWaglerOptions() {
+        const team = document.getElementById('qTeam').value;
+        const select = document.getElementById('qName');
+
+        if (!team) {
+            select.innerHTML = '<option value="" disabled selected>먼저 팀을 선택하세요</option>';
+            return;
+        }
+
+        const members = waglerList.filter(w => w.team === team);
+        select.innerHTML = '<option value="" disabled selected>이름을 선택하세요</option>' +
+            members.map(w => `<option value="${w.name}">${w.name}</option>`).join('');
+
+        if (!members.length) {
+            select.innerHTML = '<option value="" disabled selected>이 팀에 등록된 와글러가 없어요</option>';
+        }
+    }
+
+    loadCatalog();
+    loadWeeks();
+    loadWaglerList();
+</script>
+
+</body>
+</html>
