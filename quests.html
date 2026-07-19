@@ -71,12 +71,6 @@
             outline: none;
             border-color: #6c5ce7;
         }
-        .quest-points {
-            font-size: 12px;
-            font-weight: 700;
-            color: #6c5ce7;
-            margin-top: 4px;
-        }
         .btn {
             width: 100%;
             padding: 12px;
@@ -194,7 +188,6 @@
         <select id="qQuest">
             <option value="" disabled selected>불러오는 중...</option>
         </select>
-        <div class="quest-points" id="qPointsDisplay"></div>
     </div>
 
     <div class="field">
@@ -246,11 +239,6 @@
             if (!response.ok) throw new Error(data.error || '불러오기 실패');
             select.innerHTML = '<option value="" disabled selected>퀘스트를 선택하세요</option>' +
                 data.map(q => `<option value="${q.id}" data-points="${q.points}">${q.name} (+${q.points}점)</option>`).join('');
-            select.addEventListener('change', () => {
-                const opt = select.options[select.selectedIndex];
-                const points = opt?.dataset?.points;
-                document.getElementById('qPointsDisplay').innerText = points ? `이 퀘스트는 +${points}점이에요` : '';
-            });
         } catch (err) {
             select.innerHTML = '<option value="" disabled selected>불러오기 실패</option>';
         }

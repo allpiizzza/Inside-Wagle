@@ -89,6 +89,11 @@ async function findWaglerPage(headers, waglerDbId, name, team) {
     return matched || data.results[0] || null;
 }
 
+function weekSortKey(name) {
+    const match = name.match(/(\d+)월\s*(\d+)주차/);
+    return match ? [parseInt(match[1], 10), parseInt(match[2], 10)] : [999, 999];
+}
+
 function extractWeeks(page, questPointsMap) {
     const weeks = [];
     for (const [propName, prop] of Object.entries(page.properties)) {
@@ -98,6 +103,11 @@ function extractWeeks(page, questPointsMap) {
         const weekPoints = questIds.reduce((sum, id) => sum + (questPointsMap[id]?.points || 0), 0);
         weeks.push({ name: propName, questIds, questNames, points: weekPoints });
     }
+    weeks.sort((a, b) => {
+        const [am, aw] = weekSortKey(a.name);
+        const [bm, bw] = weekSortKey(b.name);
+        return am - bm || aw - bw;
+    });
     return weeks;
 }
 

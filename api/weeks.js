@@ -43,6 +43,16 @@ export default async function handler(req, res) {
             .filter(([name, prop]) => prop.type === 'relation' && name.includes('주차'))
             .map(([name]) => name);
 
+        function weekSortKey(name) {
+            const match = name.match(/(\d+)월\s*(\d+)주차/);
+            return match ? [parseInt(match[1], 10), parseInt(match[2], 10)] : [999, 999];
+        }
+        weeks.sort((a, b) => {
+            const [am, aw] = weekSortKey(a);
+            const [bm, bw] = weekSortKey(b);
+            return am - bm || aw - bw;
+        });
+
         return res.status(200).json(weeks);
     } catch (err) {
         return res.status(500).json({ error: err.message });
