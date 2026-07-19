@@ -77,6 +77,21 @@ async function fetchWaglerMap(headers, waglerDbId) {
     return map;
 }
 
+// 같은 서버리스 인스턴스가 살아있는 동안(warm) 와글러 맵을 잠깐 재사용해서
+// 매 요청마다 와글러 DB 전체 + 팀 이름 조회를 반복하지 않도록 함
+let waglerMapCache = { data: null, fetchedAt: 0 };
+const WAGLER_MAP_TTL_MS = 60_000; // 1분
+
+async function getCachedWaglerMap(headers, waglerDbId) {
+    const now = Date.now();
+    if (waglerMapCache.data && now - waglerMapCache.fetchedAt < WAGLER_MAP_TTL_MS) {
+        return waglerMapCache.data;
+    }
+    const map = await fetchWaglerMap(headers, waglerDbId);
+    waglerMapCache = { data: map, fetchedAt: now };
+    return map;
+}
+
 async function findWaglerByName(headers, waglerDbId, name) {
     const response = await fetch(`https://api.notion.com/v1/databases/${waglerDbId}/query`, {
         method: 'POST',
@@ -115,20 +130,21 @@ export default async function handler(req, res) {
     try {
         // ---------- 목록 조회 ----------
         if (req.method === 'GET') {
-            const response = await fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
-                method: 'POST',
-                headers,
-                body: JSON.stringify({
-                    sorts: [{ timestamp: 'created_time', direction: 'descending' }],
-                    page_size: 100,
+            const [response, waglerMap] = await Promise.all([
+                fetch(`https://api.notion.com/v1/databases/${DATABASE_ID}/query`, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify({
+                        sorts: [{ timestamp: 'created_time', direction: 'descending' }],
+                        page_size: 100,
+                    }),
                 }),
-            });
+                getCachedWaglerMap(headers, WAGLER_DB_ID),
+            ]);
             const data = await response.json();
             if (!response.ok) {
                 return res.status(response.status).json({ error: data.message || 'Notion 조회 실패' });
             }
-
-            const waglerMap = await fetchWaglerMap(headers, WAGLER_DB_ID);
 
             const marbles = data.results.map((page) => {
                 const waglerId = page.properties['와글러']?.relation?.[0]?.id;
