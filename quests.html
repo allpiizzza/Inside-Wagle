@@ -412,7 +412,7 @@
             members.map(w => `<option value="${w.name}">${w.name}</option>`).join('');
 
         if (!members.length) {
-            select.innerHTML = '<option value="" disabled selected>이 팀에 등록된 와글러가 없어요</option>';
+            select.innerHTML = '<option value="" disabled selected>불러오는 중...</option>';
         }
     }
 

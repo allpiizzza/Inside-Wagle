@@ -45,7 +45,7 @@ export default async function handler(req, res) {
                 body: JSON.stringify({
                     page_size: 100,
                     start_cursor: cursor,
-                    ...(activeOnly ? { filter: { property: '현재진행여부', checkbox: { equals: true } } } : {}),
+                    ...(activeOnly ? { filter: { property: '현재 진행중', checkbox: { equals: true } } } : {}),
                 }),
             });
             const data = await response.json();
