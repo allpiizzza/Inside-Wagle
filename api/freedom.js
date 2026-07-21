@@ -1,6 +1,6 @@
 // api/freedom.js
 // Vercel Serverless Function - 프리덤 독서 기록
-// 날짜를 골라 여러 시간대를 선택해도, 그날 하루치로 "N월 프리덤" 값을 +1만 함
+// 날짜 하루에 선택한 시간대 개수만큼 "N월 프리덤" 값을 더함 (예: 3개 선택 시 +3)
 
 const NOTION_VERSION = '2022-06-28';
 const ALLOWED_ORIGIN = '*';
@@ -89,7 +89,7 @@ export default async function handler(req, res) {
             }
 
             const currentValue = prop.number ?? 0;
-            const newValue = currentValue + 1;
+            const newValue = currentValue + hours.length;
 
             const response = await fetch(`https://api.notion.com/v1/pages/${page.id}`, {
                 method: 'PATCH',
@@ -105,7 +105,7 @@ export default async function handler(req, res) {
                 return res.status(response.status).json({ error: data.message || 'Notion 저장 실패' });
             }
 
-            return res.status(200).json({ ok: true, month: propName, newValue });
+            return res.status(200).json({ ok: true, month: propName, added: hours.length, newValue });
         }
 
         res.setHeader('Allow', ['GET', 'POST', 'OPTIONS']);

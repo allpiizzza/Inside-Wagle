@@ -158,7 +158,7 @@
 <div class="card">
     <a class="back-link" href="index.html">← 메인으로</a>
     <h3>📖 프리덤 독서 기록</h3>
-    <div class="subtitle">읽은 날짜와 시간대를 선택하면 그 달 프리덤 횟수가 +1 돼요</div>
+    <div class="subtitle">읽은 날짜와 시간대를 선택하면 선택한 개수만큼 그 달 프리덤 점수가 더해져요</div>
 
     <div class="field">
         <label>팀</label>
@@ -351,7 +351,7 @@
             if (!response.ok) throw new Error(data.error || '기록 실패');
 
             status.className = 'status-msg ok';
-            status.innerText = `${data.month} +1 → 현재 ${data.newValue}회 ✅`;
+            status.innerText = `${data.month} +${data.added} → 현재 ${data.newValue}회 ✅`;
 
             // 선택 초기화 (같은 사람이 다른 날짜도 이어서 기록할 수 있게)
             selectedHours.clear();
