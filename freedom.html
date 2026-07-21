@@ -1,0 +1,411 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>프리덤 독서 기록 - 인사이드 와글</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #fdfbf7;
+            color: #37352f;
+            padding: 15px;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        .card {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid #edece9;
+            width: 100%;
+            max-width: 420px;
+            box-sizing: border-box;
+        }
+        h3 {
+            margin-top: 0;
+            margin-bottom: 5px;
+            text-align: center;
+            font-size: 16px;
+            color: #222;
+        }
+        .subtitle {
+            font-size: 12px;
+            color: #888;
+            text-align: center;
+            margin-bottom: 18px;
+        }
+        .back-link {
+            font-size: 12px;
+            color: #888;
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 4px;
+        }
+        .field { margin-bottom: 14px; }
+        .field label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            color: #555;
+            margin-bottom: 6px;
+        }
+        .field input[type="text"],
+        .field input[type="date"],
+        .field select {
+            width: 100%;
+            border: 1.5px solid #edece9;
+            border-radius: 8px;
+            padding: 9px 10px;
+            font-size: 14px;
+            font-family: inherit;
+            color: #222;
+            box-sizing: border-box;
+            background: #fff;
+        }
+        .field input:focus, .field select:focus {
+            outline: none;
+            border-color: #6c5ce7;
+        }
+
+        .hour-hint {
+            font-size: 11px;
+            color: #aaa;
+            text-align: center;
+            margin-bottom: 8px;
+        }
+        .hour-grid {
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            gap: 6px;
+            margin-bottom: 6px;
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+        .hour-cell {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1.5px solid #edece9;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            color: #888;
+            background: #fff;
+            cursor: pointer;
+            transition: background 0.1s, color 0.1s, border-color 0.1s;
+        }
+        .hour-cell.selected {
+            background: #6c5ce7;
+            border-color: #6c5ce7;
+            color: #fff;
+        }
+
+        .selected-summary {
+            font-size: 12px;
+            color: #6c5ce7;
+            font-weight: 700;
+            text-align: center;
+            margin-bottom: 14px;
+            min-height: 16px;
+        }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            background: #6c5ce7;
+            color: #fff;
+        }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .status-msg {
+            font-size: 12px;
+            color: #aaa;
+            text-align: center;
+            padding: 8px 0;
+        }
+        .status-msg.error { color: #c0392b; }
+        .status-msg.ok { color: #2c7a2c; }
+
+        .month-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+            margin-top: 12px;
+        }
+        .month-table td {
+            padding: 5px 2px;
+            border-bottom: 1px dashed #f1f0ed;
+            color: #666;
+        }
+        .month-table td.val { text-align: right; color: #6c5ce7; font-weight: 700; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <a class="back-link" href="index.html">← 메인으로</a>
+    <h3>📖 프리덤 독서 기록</h3>
+    <div class="subtitle">읽은 날짜와 시간대를 선택하면 그 달 프리덤 횟수가 +1 돼요</div>
+
+    <div class="field">
+        <label>팀</label>
+        <select id="fTeam" onchange="renderWaglerOptions()">
+            <option value="" disabled selected>👥 팀을 선택하세요</option>
+            <option value="생글이팀">💛 생글이팀</option>
+            <option value="새침이팀">💚 새침이팀</option>
+            <option value="포근이팀">💙 포근이팀</option>
+            <option value="중심이팀">💜 중심이팀</option>
+            <option value="불끈이팀">❤️ 불끈이팀</option>
+        </select>
+    </div>
+
+    <div class="field">
+        <label>와글러 이름</label>
+        <select id="fName">
+            <option value="" disabled selected>먼저 팀을 선택하세요</option>
+        </select>
+    </div>
+
+    <div class="field">
+        <label>날짜</label>
+        <input type="date" id="fDate">
+    </div>
+
+    <div class="field">
+        <label>시간대 (드래그해서 여러 개 선택 가능)</label>
+        <div class="hour-hint">클릭한 채로 쭉 끌면 한번에 여러 칸이 선택돼요</div>
+        <div class="hour-grid" id="hourGrid"></div>
+        <div class="selected-summary" id="selectedSummary"></div>
+    </div>
+
+    <button id="fSubmitBtn" class="btn" onclick="submitFreedom()">기록하기 📖</button>
+    <div id="fSubmitStatus" class="status-msg"></div>
+</div>
+
+<div class="card">
+    <h3>📊 월별 프리덤 현황</h3>
+    <button id="fLoadBtn" class="btn" style="background:#37352f;" onclick="loadFreedomStatus()">현황 불러오기</button>
+    <div id="fLoadStatus" class="status-msg"></div>
+    <table class="month-table" id="monthTable"></table>
+</div>
+
+<script>
+    const API_FREEDOM = '/api/freedom';
+    const API_WAGLER_LIST = '/api/waglerList';
+
+    let waglerList = [];
+
+    // ---------- 팀 -> 와글러 필터링 (다른 페이지들과 동일한 패턴) ----------
+    async function loadWaglerList() {
+        try {
+            const response = await fetch(API_WAGLER_LIST);
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || '명단 불러오기 실패');
+            waglerList = data;
+            if (document.getElementById('fTeam').value) {
+                renderWaglerOptions();
+            }
+        } catch (err) {
+            waglerList = [];
+        }
+    }
+
+    function renderWaglerOptions() {
+        const team = document.getElementById('fTeam').value;
+        const select = document.getElementById('fName');
+
+        if (!team) {
+            select.innerHTML = '<option value="" disabled selected>먼저 팀을 선택하세요</option>';
+            return;
+        }
+        const members = waglerList.filter(w => w.team === team);
+        select.innerHTML = '<option value="" disabled selected>이름을 선택하세요</option>' +
+            members.map(w => `<option value="${w.name}">${w.name}</option>`).join('');
+        if (!members.length) {
+            select.innerHTML = '<option value="" disabled selected>불러오는 중...</option>';
+        }
+    }
+
+    // ---------- 24시간 드래그 선택 그리드 ----------
+    const selectedHours = new Set();
+    let isDragging = false;
+    let dragMode = true; // true = 선택하는 중, false = 해제하는 중
+
+    function renderHourGrid() {
+        const grid = document.getElementById('hourGrid');
+        grid.innerHTML = '';
+        for (let h = 0; h < 24; h++) {
+            const cell = document.createElement('div');
+            cell.className = 'hour-cell';
+            cell.dataset.hour = h;
+            cell.innerText = `${h}시`;
+            grid.appendChild(cell);
+        }
+    }
+
+    function applyHour(cell, select) {
+        const h = parseInt(cell.dataset.hour, 10);
+        if (select) {
+            selectedHours.add(h);
+            cell.classList.add('selected');
+        } else {
+            selectedHours.delete(h);
+            cell.classList.remove('selected');
+        }
+        updateSelectedSummary();
+    }
+
+    function updateSelectedSummary() {
+        const summary = document.getElementById('selectedSummary');
+        if (!selectedHours.size) {
+            summary.innerText = '';
+            return;
+        }
+        const sorted = [...selectedHours].sort((a, b) => a - b);
+        summary.innerText = `${sorted.length}개 선택됨: ${sorted.map(h => h + '시').join(', ')}`;
+    }
+
+    function cellFromPoint(x, y) {
+        const el = document.elementFromPoint(x, y);
+        return el && el.classList.contains('hour-cell') ? el : null;
+    }
+
+    function setupHourGridEvents() {
+        const grid = document.getElementById('hourGrid');
+
+        grid.addEventListener('mousedown', (e) => {
+            const cell = e.target.closest('.hour-cell');
+            if (!cell) return;
+            isDragging = true;
+            dragMode = !cell.classList.contains('selected');
+            applyHour(cell, dragMode);
+            e.preventDefault();
+        });
+        grid.addEventListener('mouseover', (e) => {
+            if (!isDragging) return;
+            const cell = e.target.closest('.hour-cell');
+            if (cell) applyHour(cell, dragMode);
+        });
+        window.addEventListener('mouseup', () => { isDragging = false; });
+
+        grid.addEventListener('touchstart', (e) => {
+            const touch = e.touches[0];
+            const cell = cellFromPoint(touch.clientX, touch.clientY);
+            if (!cell) return;
+            isDragging = true;
+            dragMode = !cell.classList.contains('selected');
+            applyHour(cell, dragMode);
+            e.preventDefault();
+        }, { passive: false });
+        grid.addEventListener('touchmove', (e) => {
+            if (!isDragging) return;
+            const touch = e.touches[0];
+            const cell = cellFromPoint(touch.clientX, touch.clientY);
+            if (cell) applyHour(cell, dragMode);
+            e.preventDefault();
+        }, { passive: false });
+        window.addEventListener('touchend', () => { isDragging = false; });
+    }
+
+    // ---------- 제출 ----------
+    async function submitFreedom() {
+        const team = document.getElementById('fTeam').value;
+        const name = document.getElementById('fName').value;
+        const date = document.getElementById('fDate').value;
+        const btn = document.getElementById('fSubmitBtn');
+        const status = document.getElementById('fSubmitStatus');
+
+        if (!team) { alert('팀을 선택해주세요!'); return; }
+        if (!name) { alert('와글러 이름을 선택해주세요!'); return; }
+        if (!date) { alert('날짜를 선택해주세요!'); return; }
+        if (!selectedHours.size) { alert('시간대를 1개 이상 선택해주세요!'); return; }
+
+        btn.disabled = true;
+        btn.innerText = '기록 중...';
+        status.className = 'status-msg';
+        status.innerText = '';
+
+        try {
+            const response = await fetch(API_FREEDOM, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name, team, date,
+                    hours: [...selectedHours],
+                }),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || '기록 실패');
+
+            status.className = 'status-msg ok';
+            status.innerText = `${data.month} +1 → 현재 ${data.newValue}회 ✅`;
+
+            // 선택 초기화 (같은 사람이 다른 날짜도 이어서 기록할 수 있게)
+            selectedHours.clear();
+            document.querySelectorAll('.hour-cell.selected').forEach(c => c.classList.remove('selected'));
+            updateSelectedSummary();
+        } catch (err) {
+            status.className = 'status-msg error';
+            status.innerText = err.message;
+        } finally {
+            btn.disabled = false;
+            btn.innerText = '기록하기 📖';
+        }
+    }
+
+    // ---------- 월별 현황 조회 ----------
+    async function loadFreedomStatus() {
+        const team = document.getElementById('fTeam').value;
+        const name = document.getElementById('fName').value;
+        const btn = document.getElementById('fLoadBtn');
+        const status = document.getElementById('fLoadStatus');
+        const table = document.getElementById('monthTable');
+
+        if (!name) { alert('위에서 이름을 먼저 선택해주세요!'); return; }
+
+        btn.disabled = true;
+        btn.innerText = '불러오는 중...';
+        status.className = 'status-msg';
+        status.innerText = '';
+
+        try {
+            const params = new URLSearchParams({ name });
+            if (team) params.set('team', team);
+            const response = await fetch(`${API_FREEDOM}?${params.toString()}`);
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || '조회 실패');
+
+            table.innerHTML = data.freedomMonths.map(m => `<tr><td>${m.name}</td><td class="val">${m.value}회</td></tr>`).join('')
+                || '<tr><td colspan="2">아직 등록된 프리덤 속성이 없어요.</td></tr>';
+        } catch (err) {
+            status.className = 'status-msg error';
+            status.innerText = err.message;
+        } finally {
+            btn.disabled = false;
+            btn.innerText = '현황 불러오기';
+        }
+    }
+
+    // 오늘 날짜를 기본값으로
+    document.getElementById('fDate').value = new Date().toLocaleDateString('sv-SE');
+
+    renderHourGrid();
+    setupHourGridEvents();
+    loadWaglerList();
+</script>
+
+</body>
+</html>
