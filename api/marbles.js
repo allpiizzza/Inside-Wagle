@@ -172,6 +172,9 @@ export default async function handler(req, res) {
       if (!name || !name.trim()) {
         return res.status(400).json({ error: '이름을 입력해주세요.' });
       }
+      if (!title || !title.trim()) {
+        return res.status(400).json({ error: '책 제목을 입력해주세요.' });
+      }
       if (typeof pages !== 'number' || !Number.isFinite(pages) || pages < 1) {
         return res.status(400).json({ error: '페이지 수를 1 이상의 숫자로 입력해주세요.' });
       }
