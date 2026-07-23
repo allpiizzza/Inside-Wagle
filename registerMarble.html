@@ -132,9 +132,9 @@
         .btn:disabled { background: #e2e1de; color: #a09f9c; cursor: not-allowed; }
 
         .storage-grid {
-            display: grid;
-            grid-template-columns: repeat(6, 1fr);
-            gap: 14px 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
             margin-top: 4px;
             min-height: 50px;
             max-height: 460px;
@@ -150,9 +150,13 @@
             background: rgba(255,255,255,0.25);
             border-radius: 10px;
         }
-        .team-tabs {
-            display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; justify-content: center;
+        .team-tabs-wrap {
+            margin-bottom: 14px;
         }
+        .team-tabs-row {
+            display: flex; gap: 6px; justify-content: center; margin-bottom: 6px;
+        }
+        .team-tabs-row:last-child { margin-bottom: 0; }
         .team-tab {
             --team-color: #999;
             border: 1.5px solid var(--team-color);
@@ -198,26 +202,38 @@
         .tower-panel .mini-marble {
             box-shadow: inset -5px -5px 12px rgba(0,0,0,0.35), inset 5px 5px 10px rgba(255,255,255,0.5), 0 0 14px rgba(255,255,255,0.25);
         }
-        .saved-marble-box {
-            display: flex; flex-direction: column; align-items: center; gap: 4px; position: relative; cursor: pointer;
+        .tower-panel .saved-marble-box {
+            border-bottom: 1px dashed rgba(255, 255, 255, 0.15);
         }
+        .saved-marble-box {
+            display: flex;
+            flex-direction: row;
+            align-items: center;
+            gap: 12px;
+            position: relative;
+            cursor: pointer;
+            padding: 8px 30px 8px 2px;
+        }
+        .saved-marble-box:last-child { border-bottom: none; }
         .mini-marble {
-            width: 40px; height: 40px; border-radius: 50%; box-shadow: inset -5px -5px 12px rgba(0,0,0,0.2), inset 5px 5px 10px rgba(255,255,255,0.6), 0 4px 8px rgba(0,0,0,0.1);
-            position: relative; transition: transform 0.2s; margin: 0 auto;
+            width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; box-shadow: inset -5px -5px 12px rgba(0,0,0,0.2), inset 5px 5px 10px rgba(255,255,255,0.6), 0 4px 8px rgba(0,0,0,0.1);
+            position: relative; transition: transform 0.2s;
         }
         .mini-marble:hover { transform: scale(1.15); }
         .mini-marble::after {
             content: ''; position: absolute; top: 5px; left: 5px; width: 9px; height: 4px; background: rgba(255, 255, 255, 0.6); border-radius: 50%; transform: rotate(-15deg);
         }
+        .saved-text { min-width: 0; flex: 1; }
         .saved-title {
-            font-size: 9px; text-align: center; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #555;
-            font-weight: 500;
+            font-size: 13px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #555;
+            font-weight: 600;
         }
         .saved-name {
-            font-size: 8px; text-align: center; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #999;
+            font-size: 11px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #999;
+            margin-top: 2px;
         }
         .delete-btn {
-            position: absolute; top: -4px; right: -4px; width: 14px; height: 14px; background: rgba(0,0,0,0.6); color: #fff; border-radius: 50%; font-size: 9px; line-height: 14px; text-align: center; display: none;
+            position: absolute; top: 50%; right: 2px; transform: translateY(-50%); width: 18px; height: 18px; background: rgba(0,0,0,0.5); color: #fff; border-radius: 50%; font-size: 11px; line-height: 18px; text-align: center; display: none;
         }
         .saved-marble-box:hover .delete-btn { display: block; }
         .storage-status { font-size: 12px; color: #aaa; text-align: center; }
@@ -251,6 +267,10 @@
         <input type="text" id="bookTitle" class="book-title-input" placeholder="📖 책 제목을 입력하세요" maxlength="30">
     </div>
 
+    <div class="book-title-container">
+        <input type="number" id="bookPages" class="book-title-input" placeholder="📄 읽은 페이지 수" min="1" step="1">
+    </div>
+
     <div class="display-zone">
         <div id="marbleEffect" class="marble"></div>
     </div>
@@ -278,7 +298,7 @@
     <h3>🌌 장기 기억 보관방</h3>
     <div class="subtitle">팀별로 쌓인 기억구슬들을 확인해보세요</div>
 
-    <div class="team-tabs" id="teamTabs"></div>
+    <div class="team-tabs-wrap" id="teamTabs"></div>
 
     <div class="tower-panel" id="towerPanel">
         <div class="tower-header" id="towerHeader"></div>
@@ -358,12 +378,19 @@
     async function saveMarble() {
         const nameInput = document.getElementById('userName');
         const titleInput = document.getElementById('bookTitle');
+        const pagesInput = document.getElementById('bookPages');
         const name = nameInput.value.trim();
         const title = titleInput.value.trim() || "무제의 기억";
+        const pages = pagesInput.value ? parseInt(pagesInput.value, 10) : null;
 
         if (!name) {
             alert("이름을 먼저 선택해주세요!");
             nameInput.focus();
+            return;
+        }
+        if (!pages || pages < 1) {
+            alert("읽은 페이지 수를 입력해주세요!");
+            pagesInput.focus();
             return;
         }
 
@@ -375,7 +402,7 @@
             const response = await fetch(API_BASE_URL, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ title, name, emotions: currentEmotions }),
+                body: JSON.stringify({ title, name, pages, emotions: currentEmotions }),
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || '저장에 실패했어요.');
@@ -383,6 +410,7 @@
             // 폼 초기화
             nameInput.value = '';
             titleInput.value = '';
+            pagesInput.value = '';
             document.getElementById('marbleEffect').classList.remove('active');
             saveBtn.style.display = 'none';
             document.querySelectorAll('.emotion-grid input[type="checkbox"]').forEach(i => i.checked = false);
@@ -440,13 +468,19 @@
 
     function renderTeamTabs() {
         const tabs = document.getElementById('teamTabs');
-        tabs.innerHTML = TEAMS.map(t => `
+        const renderTab = t => `
             <button
                 class="team-tab ${t.name === selectedTeam ? 'active' : ''}"
                 style="--team-color: ${t.color}"
                 onclick="selectTeam('${t.name}')"
             >${t.emoji} ${t.name}</button>
-        `).join('');
+        `;
+        const topRow = TEAMS.slice(0, 2);
+        const bottomRow = TEAMS.slice(2);
+        tabs.innerHTML = `
+            <div class="team-tabs-row">${topRow.map(renderTab).join('')}</div>
+            <div class="team-tabs-row">${bottomRow.map(renderTab).join('')}</div>
+        `;
     }
 
     function selectTeam(name) {
@@ -480,12 +514,14 @@
             const { gradient } = buildGradientFromEmotions(m.emotions);
             const box = document.createElement('div');
             box.className = 'saved-marble-box';
-            box.onclick = () => alert(`🔮 [${m.title}]\n작성자: ${m.name} (${m.team})\n감정: ${m.emotions.join(', ')}`);
+            box.onclick = () => alert(`🔮 [${m.title}]\n작성자: ${m.name} (${m.team})\n페이지: ${m.pages ?? '-'}p\n감정: ${m.emotions.join(', ')}`);
 
             box.innerHTML = `
                 <div class="mini-marble" style="background: ${gradient};"></div>
-                <div class="saved-title">${m.title}</div>
-                <div class="saved-name">${m.name}</div>
+                <div class="saved-text">
+                    <div class="saved-title">${m.title}</div>
+                    <div class="saved-name">${m.name}${m.pages ? ' · ' + m.pages + 'p' : ''}</div>
+                </div>
                 <div class="delete-btn" onclick="deleteMarble('${m.id}', event)">×</div>
             `;
             grid.appendChild(box);
