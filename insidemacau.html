@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>🎰와글노름꾼💸</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbit&family=Jua&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            font-family: 'Orbit', 'Apple SD Gothic Neo', 'Jua', sans-serif;
+            background: linear-gradient(135deg, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c);
+            background-size: 400% 400%;
+            animation: goldGradient 10s ease infinite;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        @keyframes goldGradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        .mobile-container {
+            width: 100%;
+            max-width: 420px;
+            min-height: 100vh;
+            background: linear-gradient(to bottom, rgba(255, 255, 255, 0.95), rgba(253, 248, 235, 0.95));
+            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 30px 15px;
+        }
+
+        /* 큰 메인 타이틀 */
+        .title {
+            color: #b38728;
+            font-size: 28px;
+            text-align: center;
+            margin-bottom: 5px; /* 서브타이틀과의 간격을 위해 여백 축소 */
+            text-shadow: 1px 1px 0px #fff, 2px 2px 4px rgba(0,0,0,0.2);
+            font-weight: bold;
+        }
+
+        /* 작은 서브 타이틀 추가 */
+        .subtitle {
+            color: #8e6819;
+            font-size: 16px;
+            text-align: center;
+            margin-bottom: 25px;
+            text-shadow: 1px 1px 0px #fff;
+            font-weight: bold;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 30px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .input-group input {
+            font-family: 'Orbit', 'Apple SD Gothic Neo', 'Jua', sans-serif;
+            font-size: 16px;
+            padding: 10px 15px;
+            border: 3px solid #b38728;
+            border-radius: 20px;
+            outline: none;
+            width: 60%;
+            text-align: center;
+            background-color: #fffdf5;
+        }
+
+        .roulette-wrapper {
+            position: relative;
+            width: 340px;
+            height: 340px;
+            margin-bottom: 30px;
+        }
+
+        .pointer {
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 25px solid transparent;
+            border-right: 25px solid transparent;
+            border-top: 50px solid #e74c3c;
+            z-index: 20;
+            filter: drop-shadow(0px 5px 3px rgba(0,0,0,0.4));
+        }
+
+        canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            box-shadow: 0 0 0 10px #dfb14b, 0 0 0 15px #2c3e50, 0 10px 25px rgba(0,0,0,0.5);
+            transition: transform 4s cubic-bezier(0.1, 0.7, 0.1, 1);
+        }
+
+        .center-circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 70px;
+            height: 70px;
+            background: radial-gradient(circle, #fcf6ba 30%, #b38728 100%);
+            border: 5px solid #2c3e50;
+            border-radius: 50%;
+            z-index: 10;
+            box-shadow: inset 0 3px 5px rgba(0,0,0,0.3), 0 3px 10px rgba(0,0,0,0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 24px;
+        }
+
+        .spin-btn {
+            background: linear-gradient(to bottom, #f6d365 0%, #fda085 100%);
+            color: #2c3e50;
+            font-family: 'Orbit', 'Apple SD Gothic Neo', 'Jua', sans-serif;
+            font-size: 24px;
+            font-weight: bold;
+            border: none;
+            border-radius: 40px;
+            padding: 12px 40px;
+            cursor: pointer;
+            box-shadow: 0 8px 0 #e67e22, 0 15px 15px rgba(0,0,0,0.2);
+            transition: all 0.1s;
+            margin-bottom: 20px;
+        }
+
+        .spin-btn:active {
+            transform: translateY(8px);
+            box-shadow: 0 0 0 #e67e22, 0 5px 5px rgba(0,0,0,0.2);
+        }
+
+        .spin-btn:disabled {
+            background: #bdc3c7;
+            color: #fff;
+            box-shadow: 0 8px 0 #7f8c8d;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .ranking-board {
+            width: 90%;
+            background: #fff;
+            border-radius: 15px;
+            padding: 15px 20px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-top: 10px;
+            border: 2px solid #dfb14b;
+        }
+
+        .ranking-title {
+            text-align: center;
+            font-size: 16px;
+            color: #b38728;
+            border-bottom: 2px dashed #dfb14b;
+            padding-bottom: 8px;
+            margin-bottom: 12px;
+            font-weight: bold;
+        }
+
+        .ranking-list {
+            list-style: none;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .ranking-list li {
+            display: flex;
+            justify-content: space-between;
+            font-size: 14px;
+            padding: 8px 0;
+            border-bottom: 1px solid #f1f2f6;
+            color: #2c3e50;
+        }
+
+        .ranking-list li span:last-child {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+
+        #loading {
+            display: none;
+            color: #b38728;
+            font-size: 16px;
+            margin-bottom: 15px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+
+<div class="mobile-container">
+    <!-- 타이틀 영역 -->
+    <div class="title">🎰 와글노름꾼 💸</div>
+    <div class="subtitle">제로에 걸어 제로에~~~!!!</div>
+
+    <div class="input-group">
+        <input type="text" id="userName" placeholder="이름+날짜를 입력하세요!">
+    </div>
+
+    <div class="roulette-wrapper">
+        <div class="pointer"></div>
+        <canvas id="wheel" width="400" height="400"></canvas>
+        <div class="center-circle">⭐️</div>
+    </div>
+
+    <div id="loading">결과를 불러오는 중...🚀</div>
+    <button class="spin-btn" id="spinBtn" onclick="spin()">
+        돌리기!
+        <span style="display: block; font-size: 9px; font-weight: normal; margin-top: 4px; opacity: 0.85;">
+            룰렛 티켓 있는 사람만 돌려
+        </span>
+    </button>
+
+    <div class="ranking-board">
+        <div class="ranking-title">🏆 걸어걸어 🏆</div>
+        <ul class="ranking-list" id="rankingList">
+            <li>데이터를 불러오는 중...</li>
+        </ul>
+    </div>
+</div>
+
+<script>
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbwyzlkpeDPTwbziFoU9ikadhHS_xvCETkNuJ6E3BQA43gxg91dxKKqhCNRWxkl6EF5G/exec";
+
+    const canvas = document.getElementById('wheel');
+    const ctx = canvas.getContext('2d');
+    const userNameInput = document.getElementById('userName');
+
+    const savedName = localStorage.getItem('rouletteUserName');
+    if (savedName) {
+        userNameInput.value = savedName;
+    }
+
+    userNameInput.addEventListener('input', (e) => {
+        localStorage.setItem('rouletteUserName', e.target.value);
+    });
+
+    const slices = [
+        { name: "💎 300", weight: 4, color1: "#ff0844", color2: "#ffb199" },
+        { name: "👑 200", weight: 4, color1: "#4facfe", color2: "#00f2fe" },
+        { name: "🎉 150", weight: 12, color1: "#43e97b", color2: "#38f9d7" },
+        { name: "✨ 100", weight: 18, color1: "#f6d365", color2: "#fda085" },
+        { name: "🍀 77",  weight: 18, color1: "#c471f5", color2: "#fa71cd" },
+        { name: "🚀 50",  weight: 18, color1: "#48c6ef", color2: "#6f86d6" },
+        { name: "🎈 7",   weight: 6, color1: "#fccb90", color2: "#d57eeb" },
+        { name: "💩 1",   weight: 6, color1: "#f77062", color2: "#fe5196" },
+
+        { name: "북큐1회연속채우기권", lines: ["북큐 1회연속", "채우기권"], weight: 12, color1: "#b224ef", color2: "#7579ff" },
+        { name: "프리덤1회연속채우기권", lines: ["프리덤 1회연속", "채우기권"], weight: 12, color1: "#e0c3fc", color2: "#8ec5fc" },
+        { name: "하닉오르면한번더~!", lines: ["하닉 오르면", "한번더~!"], weight: 12, color1: "#fa709a", color2: "#fee140" },
+        { name: "구립도서관무료입장권", lines: ["구립도서관", "무료입장권"], weight: 12, color1: "#a18cd1", color2: "#fbc2eb" }
+    ];
+
+    const totalWeight = slices.reduce((sum, slice) => sum + slice.weight, 0);
+    let currentRotation = 0;
+    let isSpinning = false;
+
+    function drawWheel() {
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const radius = canvas.width / 2;
+
+        let startAngle = -Math.PI / 2;
+
+        for (let i = 0; i < slices.length; i++) {
+            const sliceAngle = (slices[i].weight / totalWeight) * 2 * Math.PI;
+            const endAngle = startAngle + sliceAngle;
+
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+            ctx.closePath();
+
+            const midAngle = startAngle + sliceAngle / 2;
+            const edgeX = centerX + Math.cos(midAngle) * radius;
+            const edgeY = centerY + Math.sin(midAngle) * radius;
+
+            const gradient = ctx.createLinearGradient(centerX, centerY, edgeX, edgeY);
+            gradient.addColorStop(0, slices[i].color1);
+            gradient.addColorStop(1, slices[i].color2);
+
+            ctx.fillStyle = gradient;
+            ctx.fill();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = "#fff";
+            ctx.stroke();
+
+            ctx.save();
+            ctx.translate(centerX, centerY);
+            ctx.rotate(startAngle + sliceAngle / 2);
+            ctx.textAlign = "right";
+            ctx.fillStyle = "#fff";
+
+            const fontSize = slices[i].weight <= 6 ? 11 : 13;
+            ctx.font = `bold ${fontSize}px 'Orbit', 'Apple SD Gothic Neo', 'Jua', sans-serif`;
+            ctx.shadowColor = "rgba(0,0,0,0.6)";
+            ctx.shadowBlur = 4;
+
+            if (slices[i].lines) {
+                ctx.fillText(slices[i].lines[0], radius - 15, -6);
+                ctx.fillText(slices[i].lines[1], radius - 15, 12);
+            } else {
+                ctx.fillText(slices[i].name, radius - 15, 4);
+            }
+
+            ctx.restore();
+
+            startAngle = endAngle;
+        }
+    }
+    drawWheel();
+
+    async function loadRankings() {
+        try {
+            const response = await fetch(`${GAS_URL}?action=getRank`);
+            const rankings = await response.json();
+
+            const list = document.getElementById('rankingList');
+            list.innerHTML = '';
+
+            if(rankings.length === 0) {
+                list.innerHTML = '<li>아직 참여자가 없습니다!</li>';
+                return;
+            }
+
+            rankings.forEach((r, index) => {
+                const li = document.createElement('li');
+                let icon = index === 0 ? '🔥' : '🎲';
+
+                let displayScore = isNaN(parseInt(r.scoreText)) ? r.scoreText : `${r.scoreText}점`;
+
+                li.innerHTML = `<span>${icon} ${r.name}</span> <span>${displayScore}</span>`;
+                list.appendChild(li);
+            });
+        } catch (error) {
+            console.error("랭킹 로드 실패:", error);
+        }
+    }
+
+    loadRankings();
+
+    async function spin() {
+        const userName = userNameInput.value.trim();
+        if (!userName) {
+            alert("이름을 먼저 입력해주세요!");
+            return;
+        }
+
+        if (isSpinning) return;
+        isSpinning = true;
+
+        const spinBtn = document.getElementById('spinBtn');
+        const loading = document.getElementById('loading');
+
+        spinBtn.disabled = true;
+        loading.style.display = 'block';
+
+        try {
+            const response = await fetch(`${GAS_URL}?action=spin&name=${encodeURIComponent(userName)}`);
+            const data = await response.json();
+
+            loading.style.display = 'none';
+
+            if (!data.success) {
+                alert(data.message);
+                isSpinning = false;
+                spinBtn.disabled = false;
+                return;
+            }
+
+            const winningIndex = data.winningIndex;
+            const baseSpins = 360 * 5;
+
+            let angleToCenter = 0;
+            for (let i = 0; i < winningIndex; i++) {
+                angleToCenter += (slices[i].weight / totalWeight) * 360;
+            }
+            angleToCenter += ((slices[winningIndex].weight / totalWeight) * 360) / 2;
+
+            const targetRotation = baseSpins - angleToCenter;
+            currentRotation += targetRotation;
+
+            canvas.style.transform = `rotate(${currentRotation}deg)`;
+
+            setTimeout(() => {
+                let msgScore = isNaN(parseInt(data.score)) ? data.score : `${data.score}점`;
+                alert(`🎉 축하합니다! [${userName}]님, ${msgScore} 당첨!`);
+                loadRankings();
+                isSpinning = false;
+            }, 4000);
+
+        } catch (error) {
+            alert("서버와 통신 중 오류가 발생했습니다. 다시 시도해주세요.");
+            loading.style.display = 'none';
+            isSpinning = false;
+            spinBtn.disabled = false;
+        }
+    }
+</script>
+
+</body>
+</html>
