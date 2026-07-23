@@ -132,9 +132,9 @@
         .btn:disabled { background: #e2e1de; color: #a09f9c; cursor: not-allowed; }
 
         .storage-grid {
-            display: flex;
-            flex-direction: column;
-            gap: 4px;
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 16px 10px;
             margin-top: 4px;
             min-height: 50px;
             max-height: 460px;
@@ -202,38 +202,33 @@
         .tower-panel .mini-marble {
             box-shadow: inset -5px -5px 12px rgba(0,0,0,0.35), inset 5px 5px 10px rgba(255,255,255,0.5), 0 0 14px rgba(255,255,255,0.25);
         }
-        .tower-panel .saved-marble-box {
-            border-bottom: 1px dashed rgba(255, 255, 255, 0.15);
-        }
         .saved-marble-box {
             display: flex;
-            flex-direction: row;
+            flex-direction: column;
             align-items: center;
-            gap: 12px;
+            gap: 4px;
             position: relative;
             cursor: pointer;
-            padding: 8px 30px 8px 2px;
         }
-        .saved-marble-box:last-child { border-bottom: none; }
         .mini-marble {
-            width: 40px; height: 40px; flex-shrink: 0; border-radius: 50%; box-shadow: inset -5px -5px 12px rgba(0,0,0,0.2), inset 5px 5px 10px rgba(255,255,255,0.6), 0 4px 8px rgba(0,0,0,0.1);
-            position: relative; transition: transform 0.2s;
+            width: 44px; height: 44px; border-radius: 50%; box-shadow: inset -5px -5px 12px rgba(0,0,0,0.2), inset 5px 5px 10px rgba(255,255,255,0.6), 0 4px 8px rgba(0,0,0,0.1);
+            position: relative; transition: transform 0.2s; margin: 0 auto;
         }
         .mini-marble:hover { transform: scale(1.15); }
         .mini-marble::after {
-            content: ''; position: absolute; top: 5px; left: 5px; width: 9px; height: 4px; background: rgba(255, 255, 255, 0.6); border-radius: 50%; transform: rotate(-15deg);
+            content: ''; position: absolute; top: 6px; left: 6px; width: 10px; height: 5px; background: rgba(255, 255, 255, 0.6); border-radius: 50%; transform: rotate(-15deg);
         }
-        .saved-text { min-width: 0; flex: 1; }
+        .saved-text { width: 100%; }
         .saved-title {
-            font-size: 13px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #555;
+            font-size: 10px; text-align: center; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #555;
             font-weight: 600;
         }
         .saved-name {
-            font-size: 11px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #999;
+            font-size: 9px; text-align: center; width: 100%; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: #999;
             margin-top: 2px;
         }
         .delete-btn {
-            position: absolute; top: 50%; right: 2px; transform: translateY(-50%); width: 18px; height: 18px; background: rgba(0,0,0,0.5); color: #fff; border-radius: 50%; font-size: 11px; line-height: 18px; text-align: center; display: none;
+            position: absolute; top: -4px; right: 6px; width: 16px; height: 16px; background: rgba(0,0,0,0.55); color: #fff; border-radius: 50%; font-size: 10px; line-height: 16px; text-align: center; display: none;
         }
         .saved-marble-box:hover .delete-btn { display: block; }
         .storage-status { font-size: 12px; color: #aaa; text-align: center; }
@@ -380,12 +375,17 @@
         const titleInput = document.getElementById('bookTitle');
         const pagesInput = document.getElementById('bookPages');
         const name = nameInput.value.trim();
-        const title = titleInput.value.trim() || "무제의 기억";
+        const title = titleInput.value.trim();
         const pages = pagesInput.value ? parseInt(pagesInput.value, 10) : null;
 
         if (!name) {
             alert("이름을 먼저 선택해주세요!");
             nameInput.focus();
+            return;
+        }
+        if (!title) {
+            alert("책 제목을 입력해주세요!");
+            titleInput.focus();
             return;
         }
         if (!pages || pages < 1) {
@@ -518,10 +518,8 @@
 
             box.innerHTML = `
                 <div class="mini-marble" style="background: ${gradient};"></div>
-                <div class="saved-text">
-                    <div class="saved-title">${m.title}</div>
-                    <div class="saved-name">${m.name}${m.pages ? ' · ' + m.pages + 'p' : ''}</div>
-                </div>
+                <div class="saved-title">${m.title}</div>
+                <div class="saved-name">${m.name}${m.pages ? ' · ' + m.pages + 'p' : ''}</div>
                 <div class="delete-btn" onclick="deleteMarble('${m.id}', event)">×</div>
             `;
             grid.appendChild(box);
