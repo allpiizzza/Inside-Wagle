@@ -6,9 +6,9 @@
     <title>와글와글 인사이드</title>
     <meta name="og:description" content="🥰 모든 와글이 행복한 2026년을 보내길 🥰">
     <style>
+        * { box-sizing: border-box; }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #fdfbf7;
             color: #37352f;
             padding: 15px;
             margin: 0;
@@ -16,75 +16,117 @@
             display: flex;
             justify-content: center;
             align-items: center;
+            position: relative;
+            overflow: hidden;
+            background: radial-gradient(ellipse at 20% 10%, #fff6e0 0%, #fdfbf7 40%, #f3f0ff 100%);
         }
+
+        /* 배경에 둥둥 떠있는 글로시 감정 구슬들 */
+        .float-orb {
+            position: absolute;
+            border-radius: 50%;
+            animation-name: floaty;
+            animation-timing-function: ease-in-out;
+            animation-iteration-count: infinite;
+            animation-direction: alternate;
+        }
+        @keyframes floaty {
+            0%   { transform: translateY(0px) translateX(0px); }
+            100% { transform: translateY(-18px) translateX(8px); }
+        }
+
         .landing-card {
-            background: #ffffff;
-            border-radius: 16px;
-            padding: 36px 28px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            border: 1px solid #edece9;
+            position: relative;
+            z-index: 2;
+            background: rgba(255, 255, 255, 0.82);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 24px;
+            padding: 40px 30px;
+            box-shadow: 0 20px 50px rgba(108, 92, 231, 0.12);
+            border: 2px solid #ffffff;
             width: 100%;
             max-width: 340px;
             box-sizing: border-box;
             text-align: center;
         }
         .landing-emoji {
-            font-size: 40px;
-            margin-bottom: 6px;
+            font-size: 44px;
+            margin-bottom: 8px;
         }
         h1 {
             margin: 0 0 8px 0;
-            font-size: 19px;
-            color: #222;
+            font-size: 20px;
+            color: #4a3f8a;
+            letter-spacing: -0.3px;
         }
         .subtitle {
             font-size: 13px;
-            color: #888;
-            margin-bottom: 28px;
-            line-height: 1.5;
+            color: #9b8fc7;
+            margin-bottom: 30px;
+            line-height: 1.6;
+            font-weight: 500;
         }
         .btn-register {
-            display: inline-block;
+            display: block;
             width: 100%;
-            padding: 14px;
+            padding: 15px;
             border: none;
-            border-radius: 10px;
+            border-radius: 14px;
             font-size: 15px;
-            font-weight: bold;
+            font-weight: 700;
             cursor: pointer;
-            background: #37352f;
-            color: #fff;
             text-decoration: none;
             box-sizing: border-box;
-            transition: transform 0.15s ease, background 0.2s ease;
-        }
-        .btn-register:hover {
-            background: #22201c;
+            margin-bottom: 10px;
+            transition: transform 0.15s ease;
         }
         .btn-register:active {
             transform: scale(0.97);
         }
-        .btn-quest {
-            background: #6c5ce7;
-            margin-top: 10px;
+        .btn-register:last-child {
+            margin-bottom: 0;
         }
-        .btn-quest:hover {
-            background: #5a4bd1;
-        }
+
+        .btn-review   { background: linear-gradient(135deg, #ffe066, #ffd700); color: #6b5100; box-shadow: 0 6px 16px rgba(255, 215, 0, 0.35); }
+        .btn-quest    { background: linear-gradient(135deg, #a370f7, #6c5ce7); color: #fff; box-shadow: 0 6px 16px rgba(108, 92, 231, 0.35); }
+        .btn-freedom  { background: linear-gradient(135deg, #6ba6e8, #4a90e2); color: #fff; box-shadow: 0 6px 16px rgba(74, 144, 226, 0.35); }
+        .btn-fortune  { background: linear-gradient(135deg, #7bc97b, #5cb85c); color: #fff; box-shadow: 0 6px 16px rgba(92, 184, 92, 0.35); }
+        .btn-macau    { background: linear-gradient(135deg, #ea7b83, #e15b64); color: #fff; box-shadow: 0 6px 16px rgba(225, 91, 100, 0.35); }
     </style>
 </head>
 <body>
 
-<div class="landing-card">
-    <div class="landing-emoji">🔮</div>
-    <h1>인사이드 와글</h1>
-    <div class="subtitle">2026 하반기 이벤트<br>와글과 함께 기억구슬 모으기</div>
-    <a class="btn-register" href="registerMarble.html">📖 책후기 등록하기</a>
-    <a class="btn-register btn-quest" href="quests.html">🎯 퀘스트 인증하기</a>
-    <a class="btn-register" style="background:#37352f; margin-top:10px;" href="freedom.html">⏰ 프리덤 독서 기록</a>
-    <a class="btn-register" style="background:#8275e8; margin-top:10px;" href="fortuneteller.html">🥠 와글의 운세</a>
-    <a class="btn-register" style="background:#ba972d; margin-top:10px;" href="insidemacau.html">🎰 와글노름꾼</a>
-</div>
+    <script>
+        const colors = ['#ffd700', '#4a90e2', '#e15b64', '#a370f7', '#5cb85c', '#fd79a8', '#00cec9', '#e1b12c'];
+        for (let i = 0; i < 60; i++) {
+            const orb = document.createElement('div');
+            orb.className = 'float-orb';
+            const size = 14 + Math.random() * 36;
+            const color = colors[Math.floor(Math.random() * colors.length)];
+            orb.style.width = size + 'px';
+            orb.style.height = size + 'px';
+            orb.style.left = Math.random() * 94 + 'vw';
+            orb.style.top = Math.random() * 94 + 'vh';
+            orb.style.background = `radial-gradient(circle at 30% 30%, #ffffff 0%, ${color} 75%)`;
+            orb.style.boxShadow = `inset -4px -4px 8px rgba(0,0,0,0.15), inset 3px 3px 6px rgba(255,255,255,0.6), 0 0 ${Math.round(size * 0.6)}px ${color}55`;
+            orb.style.opacity = (0.55 + Math.random() * 0.3).toFixed(2);
+            orb.style.animationDuration = (2 + Math.random() * 1.5) + 's';
+            orb.style.animationDelay = (Math.random() * 2) + 's';
+            document.body.appendChild(orb);
+        }
+    </script>
+
+    <div class="landing-card">
+        <div class="landing-emoji">🔮</div>
+        <h1>인사이드 와글</h1>
+        <div class="subtitle">2026 하반기 이벤트<br>와글과 함께 기억구슬 모으기</div>
+        <a class="btn-register btn-review" href="registerMarble.html">📖 기억구슬 자판기</a>
+        <a class="btn-register btn-quest" href="quests.html">🎯 퀘스트 클리어</a>
+        <a class="btn-register btn-freedom" href="freedom.html">⏰ 프리덤 타임</a>
+        <a class="btn-register btn-fortune" href="fortuneteller.html">🥠 와글의 운세</a>
+        <a class="btn-register btn-macau" href="insidemacau.html">🎰 와글노름꾼</a>
+    </div>
 
 </body>
 </html>
