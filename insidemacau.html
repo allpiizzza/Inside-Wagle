@@ -341,7 +341,46 @@
         <div class="field">
             <label>이름</label>
             <select id="userName">
-                <option value="" disabled selected>불러오는 중...</option>
+                <option value="" disabled selected>이름을 선택하세요</option>
+                <optgroup label="💛 생글이팀">
+                    <option value="따란">따란 (💛 생글이팀)</option>
+                    <option value="에스">에스 (💛 생글이팀)</option>
+                    <option value="송">송 (💛 생글이팀)</option>
+                    <option value="임유월">임유월 (💛 생글이팀)</option>
+                    <option value="윤슬">윤슬 (💛 생글이팀)</option>
+                </optgroup>
+                <optgroup label="💚 당당이팀">
+                    <option value="당근">당근 (💚 당당이팀)</option>
+                    <option value="써니">써니 (💚 당당이팀)</option>
+                    <option value="동글">동글 (💚 당당이팀)</option>
+                    <option value="구마">구마 (💚 당당이팀)</option>
+                    <option value="밍보">밍보 (💚 당당이팀)</option>
+                    <option value="스물">스물 (💚 당당이팀)</option>
+                </optgroup>
+                <optgroup label="💙 포근이팀">
+                    <option value="최미노">최미노 (💙 포근이팀)</option>
+                    <option value="모모">모모 (💙 포근이팀)</option>
+                    <option value="초록">초록 (💙 포근이팀)</option>
+                    <option value="영원">영원 (💙 포근이팀)</option>
+                    <option value="이리">이리 (💙 포근이팀)</option>
+                </optgroup>
+                <optgroup label="💜 중심이팀">
+                    <option value="고래">고래 (💜 중심이팀)</option>
+                    <option value="오핑">오핑 (💜 중심이팀)</option>
+                    <option value="유누">유누 (💜 중심이팀)</option>
+                    <option value="새벽">새벽 (💜 중심이팀)</option>
+                    <option value="주니">주니 (💜 중심이팀)</option>
+                    <option value="수리">수리 (💜 중심이팀)</option>
+                    <option value="모아나">모아나 (💜 중심이팀)</option>
+                </optgroup>
+                <optgroup label="❤️ 불끈이팀">
+                    <option value="채채">채채 (❤️ 불끈이팀)</option>
+                    <option value="신디">신디 (❤️ 불끈이팀)</option>
+                    <option value="난수">난수 (❤️ 불끈이팀)</option>
+                    <option value="제임스">제임스 (❤️ 불끈이팀)</option>
+                    <option value="유재">유재 (❤️ 불끈이팀)</option>
+                    <option value="최리">최리 (❤️ 불끈이팀)</option>
+                </optgroup>
             </select>
         </div>
     </div>
@@ -378,41 +417,15 @@
     // 날짜는 오늘 날짜를 기본값으로
     playDateInput.value = new Date().toLocaleDateString('sv-SE');
 
-    // 팀 이모지 매핑 (드롭다운 표시용)
-    const TEAM_EMOJI = {
-        '생글이팀': '💛',
-        '당당이팀': '💚',
-        '포근이팀': '💙',
-        '중심이팀': '💜',
-        '불끈이팀': '❤️',
-    };
-
-    async function loadWaglerOptions() {
-        try {
-            const response = await fetch('/api/waglerList');
-            const waglers = await response.json();
-            if (!response.ok) throw new Error(waglers.error || '명단 불러오기 실패');
-
-            const saved = localStorage.getItem('rouletteUserName');
-            userNameInput.innerHTML = '<option value="" disabled selected>이름을 선택하세요</option>' +
-                waglers.map(w => {
-                    const emoji = TEAM_EMOJI[w.team] || '';
-                    return `<option value="${w.name}">${w.name} (${emoji} ${w.team || '팀 미정'})</option>`;
-                }).join('');
-
-            if (saved && waglers.some(w => w.name === saved)) {
-                userNameInput.value = saved;
-            }
-        } catch (err) {
-            userNameInput.innerHTML = '<option value="" disabled selected>불러오는 중...</option>';
-        }
+    // 이름 목록은 fortuneteller.html과 동일하게 하드코딩 (API 호출 없음)
+    const savedName = localStorage.getItem('rouletteUserName');
+    if (savedName) {
+        userNameInput.value = savedName;
     }
 
     userNameInput.addEventListener('change', (e) => {
         localStorage.setItem('rouletteUserName', e.target.value);
     });
-
-    loadWaglerOptions();
 
     const slices = [
         { name: "💎 300", weight: 4, color1: "#ff0844", color2: "#ffb199" },
