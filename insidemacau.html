@@ -2,215 +2,348 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>🎰와글노름꾼💸</title>
-    <link href="https://fonts.googleapis.com/css2?family=Orbit&family=Jua&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🎰 와글노름꾼</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbit&display=swap" rel="stylesheet">
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
-
         body {
-            font-family: 'Orbit', 'Apple SD Gothic Neo', 'Jua', sans-serif;
-            background: linear-gradient(135deg, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c);
-            background-size: 400% 400%;
-            animation: goldGradient 10s ease infinite;
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
-            min-height: 100vh;
-            overflow-x: hidden;
-        }
-
-        @keyframes goldGradient {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        .mobile-container {
-            width: 100%;
-            max-width: 420px;
-            min-height: 100vh;
-            background: linear-gradient(to bottom, rgba(255, 255, 255, 0.95), rgba(253, 248, 235, 0.95));
-            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+            font-family: 'Orbit', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #fdfbf7;
+            color: #37352f;
+            padding: 15px;
+            margin: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
-            padding: 30px 15px;
+            gap: 20px;
+            position: relative;
+            overflow-x: hidden;
         }
 
-        /* 큰 메인 타이틀 */
-        .title {
+        /* 배경에 떠다니는 금빛 코인들 (index.html의 글로시 구슬과 같은 방식) */
+        .float-coin {
+            position: absolute;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation-name: floaty;
+            animation-timing-function: ease-in-out;
+            animation-iteration-count: infinite;
+            animation-direction: alternate;
+            z-index: 0;
+            pointer-events: none;
+        }
+        @keyframes floaty {
+            0%   { transform: translateY(0px) translateX(0px) rotate(0deg); }
+            100% { transform: translateY(-16px) translateX(6px) rotate(12deg); }
+        }
+
+        .card {
+            position: relative;
+            z-index: 1;
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 24px;
+            width: 100%;
+            max-width: 420px;
+            box-sizing: border-box;
+            border: 2px solid #dfb14b;
+        }
+        .card.neon {
+            animation: neonPulse 2.4s ease-in-out infinite;
+        }
+        h3 {
+            margin-top: 0;
+            margin-bottom: 5px;
+            text-align: center;
+            font-size: 24px;
+            font-family: 'Orbit', -apple-system, sans-serif;
             color: #b38728;
-            font-size: 28px;
-            text-align: center;
-            margin-bottom: 5px; /* 서브타이틀과의 간격을 위해 여백 축소 */
-            text-shadow: 1px 1px 0px #fff, 2px 2px 4px rgba(0,0,0,0.2);
-            font-weight: bold;
+            text-shadow: 1px 1px 0px #fff, 0 2px 6px rgba(179, 135, 40, 0.25);
         }
-
-        /* 작은 서브 타이틀 추가 */
         .subtitle {
+            font-size: 14px;
             color: #8e6819;
-            font-size: 16px;
             text-align: center;
-            margin-bottom: 25px;
-            text-shadow: 1px 1px 0px #fff;
-            font-weight: bold;
+            margin-bottom: 18px;
+            font-weight: 600;
         }
-
-        .input-group {
+        .back-link {
+            font-size: 13px;
+            color: #888;
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 4px;
+        }
+        .field-row {
             display: flex;
             gap: 10px;
-            margin-bottom: 30px;
-            width: 100%;
-            justify-content: center;
+            margin-bottom: 16px;
         }
-
-        .input-group input {
-            font-family: 'Orbit', 'Apple SD Gothic Neo', 'Jua', sans-serif;
-            font-size: 16px;
-            padding: 10px 15px;
-            border: 3px solid #b38728;
-            border-radius: 20px;
-            outline: none;
-            width: 60%;
+        .field-row .field {
+            flex: 1;
+            margin-bottom: 0;
+            min-width: 0;
+        }
+        .field { margin-bottom: 16px; }
+        .field label {
+            display: block;
+            font-size: 14px;
+            font-weight: 700;
+            color: #555;
+            margin-bottom: 6px;
             text-align: center;
-            background-color: #fffdf5;
+        }
+        .field input[type="text"],
+        .field input[type="date"],
+        .field select {
+            width: 100%;
+            border: 1.5px solid #edece9;
+            border-radius: 8px;
+            padding: 10px 6px;
+            font-size: 16px;
+            font-family: inherit;
+            color: #222;
+            box-sizing: border-box;
+            background: #fff;
+            text-align: center;
+            text-align-last: center;
+        }
+        .field input:focus,
+        .field select:focus {
+            outline: none;
+            border-color: #e15b64;
         }
 
         .roulette-wrapper {
             position: relative;
-            width: 340px;
-            height: 340px;
-            margin-bottom: 30px;
+            width: 320px;
+            height: 320px;
+            margin: 28px auto 20px auto;
         }
-
         .pointer {
             position: absolute;
-            top: -20px;
+            top: -16px;
             left: 50%;
             transform: translateX(-50%);
             width: 0;
             height: 0;
-            border-left: 25px solid transparent;
-            border-right: 25px solid transparent;
-            border-top: 50px solid #e74c3c;
+            border-left: 20px solid transparent;
+            border-right: 20px solid transparent;
+            border-top: 38px solid #e15b64;
             z-index: 20;
-            filter: drop-shadow(0px 5px 3px rgba(0,0,0,0.4));
+            filter: drop-shadow(0px 3px 3px rgba(0,0,0,0.25));
         }
-
         canvas {
             width: 100%;
             height: 100%;
             border-radius: 50%;
-            box-shadow: 0 0 0 10px #dfb14b, 0 0 0 15px #2c3e50, 0 10px 25px rgba(0,0,0,0.5);
+            box-shadow: 0 0 0 6px #fff, 0 0 0 8px #edece9, 0 8px 20px rgba(0,0,0,0.15);
             transition: transform 4s cubic-bezier(0.1, 0.7, 0.1, 1);
         }
-
         .center-circle {
             position: absolute;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            width: 70px;
-            height: 70px;
-            background: radial-gradient(circle, #fcf6ba 30%, #b38728 100%);
-            border: 5px solid #2c3e50;
+            width: 62px;
+            height: 62px;
+            background: radial-gradient(circle, #fff 30%, #f1e9c8 100%);
+            border: 3px solid #fff;
             border-radius: 50%;
             z-index: 10;
-            box-shadow: inset 0 3px 5px rgba(0,0,0,0.3), 0 3px 10px rgba(0,0,0,0.5);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.2);
             display: flex;
             justify-content: center;
             align-items: center;
-            font-size: 24px;
+            font-size: 26px;
         }
 
-        .spin-btn {
-            background: linear-gradient(to bottom, #f6d365 0%, #fda085 100%);
-            color: #2c3e50;
-            font-family: 'Orbit', 'Apple SD Gothic Neo', 'Jua', sans-serif;
-            font-size: 24px;
-            font-weight: bold;
+        .btn-spin {
+            display: block;
+            width: 100%;
+            padding: 14px;
             border: none;
-            border-radius: 40px;
-            padding: 12px 40px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            font-family: 'Orbit', -apple-system, sans-serif;
             cursor: pointer;
-            box-shadow: 0 8px 0 #e67e22, 0 15px 15px rgba(0,0,0,0.2);
-            transition: all 0.1s;
-            margin-bottom: 20px;
+            background: linear-gradient(135deg, #fcf6ba, #dfb14b);
+            color: #6b5100;
+            box-shadow: 0 6px 16px rgba(223, 177, 75, 0.4);
+            transition: transform 0.15s ease, opacity 0.2s;
         }
-
-        .spin-btn:active {
-            transform: translateY(8px);
-            box-shadow: 0 0 0 #e67e22, 0 5px 5px rgba(0,0,0,0.2);
-        }
-
-        .spin-btn:disabled {
-            background: #bdc3c7;
-            color: #fff;
-            box-shadow: 0 8px 0 #7f8c8d;
+        .btn-spin:active { transform: scale(0.97); }
+        .btn-spin:disabled {
+            background: #e2e1de;
+            color: #a09f9c;
+            box-shadow: none;
             cursor: not-allowed;
-            transform: none;
         }
-
-        .ranking-board {
-            width: 90%;
-            background: #fff;
-            border-radius: 15px;
-            padding: 15px 20px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            margin-top: 10px;
-            border: 2px solid #dfb14b;
+        .btn-spin .btn-hint {
+            display: block;
+            font-size: 12px;
+            font-weight: 500;
+            margin-top: 4px;
+            opacity: 0.9;
         }
-
-        .ranking-title {
-            text-align: center;
-            font-size: 16px;
-            color: #b38728;
-            border-bottom: 2px dashed #dfb14b;
-            padding-bottom: 8px;
-            margin-bottom: 12px;
-            font-weight: bold;
+        /* 유머용 수상한 도박사이트 연출 */
+        @keyframes neonPulse {
+            0%   { border-color: #dfb14b; box-shadow: 0 4px 20px rgba(0,0,0,0.08), 0 0 12px rgba(223,177,75,0.6); }
+            33%  { border-color: #e15b64; box-shadow: 0 4px 20px rgba(0,0,0,0.08), 0 0 12px rgba(225,91,100,0.6); }
+            66%  { border-color: #6c5ce7; box-shadow: 0 4px 20px rgba(0,0,0,0.08), 0 0 12px rgba(108,92,231,0.6); }
+            100% { border-color: #dfb14b; box-shadow: 0 4px 20px rgba(0,0,0,0.08), 0 0 12px rgba(223,177,75,0.6); }
         }
-
-        .ranking-list {
-            list-style: none;
-            max-height: 200px;
-            overflow-y: auto;
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.25; }
         }
-
-        .ranking-list li {
-            display: flex;
-            justify-content: space-between;
+        @keyframes marquee {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        .ad-marquee {
+            width: 100%;
+            max-width: 420px;
+            background: #1a1330;
+            color: #ffd700;
             font-size: 14px;
-            padding: 8px 0;
-            border-bottom: 1px solid #f1f2f6;
-            color: #2c3e50;
+            font-weight: 800;
+            padding: 6px 0;
+            overflow: hidden;
+            white-space: nowrap;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(255,215,0,0.4);
         }
-
-        .ranking-list li span:last-child {
-            color: #e74c3c;
-            font-weight: bold;
+        .ad-marquee span {
+            display: inline-block;
+            padding-left: 100%;
+            animation: marquee 11s linear infinite;
+        }
+        .live-counter {
+            font-size: 13px;
+            color: #e15b64;
+            text-align: center;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .live-counter .dot {
+            display: inline-block;
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: #e15b64;
+            margin-right: 4px;
+            animation: blink 1.2s infinite;
+        }
+        .hot-badge {
+            position: absolute;
+            top: -10px;
+            right: -8px;
+            background: linear-gradient(135deg, #ff5f6d, #ffc371);
+            color: #fff;
+            font-size: 12px;
+            font-weight: 800;
+            padding: 4px 9px;
+            border-radius: 12px;
+            box-shadow: 0 3px 8px rgba(255, 95, 109, 0.4);
+            animation: blink 1s infinite;
+            transform: rotate(8deg);
+        }
+        .trust-footer {
+            font-size: 12px;
+            color: #aaa;
+            text-align: center;
+            margin-top: 12px;
+            letter-spacing: 0.2px;
         }
 
         #loading {
             display: none;
+            font-size: 13px;
+            color: #888;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .ranking-title {
+            text-align: center;
+            font-size: 17px;
+            font-weight: 700;
+            font-family: 'Orbit', -apple-system, sans-serif;
             color: #b38728;
-            font-size: 16px;
-            margin-bottom: 15px;
-            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .ranking-list {
+            list-style: none;
+            max-height: 220px;
+            overflow-y: auto;
+        }
+        .ranking-list li {
+            display: flex;
+            justify-content: space-between;
+            font-size: 15px;
+            padding: 8px 2px;
+            border-bottom: 1px dashed #f1f0ed;
+            color: #555;
+        }
+        .ranking-list li:last-child { border-bottom: none; }
+        .ranking-list li span:last-child {
+            color: #e15b64;
+            font-weight: 700;
         }
     </style>
 </head>
 <body>
 
-<div class="mobile-container">
-    <!-- 타이틀 영역 -->
-    <div class="title">🎰 와글노름꾼 💸</div>
-    <div class="subtitle">제로에 걸어 제로에~~~!!!</div>
+<script>
+    // 배경에 떠다니는 금빛 코인들
+    const coinEmojis = ['🪙', '💰', '🎲', '🃏', '⭐'];
+    for (let i = 0; i < 22; i++) {
+        const coin = document.createElement('div');
+        coin.className = 'float-coin';
+        const size = 20 + Math.random() * 22;
+        coin.style.width = size + 'px';
+        coin.style.height = size + 'px';
+        coin.style.left = Math.random() * 92 + 'vw';
+        coin.style.top = Math.random() * 92 + 'vh';
+        coin.style.fontSize = (size * 0.7) + 'px';
+        coin.style.opacity = (0.4 + Math.random() * 0.35).toFixed(2);
+        coin.style.animationDuration = (3 + Math.random() * 2.5) + 's';
+        coin.style.animationDelay = (Math.random() * 2) + 's';
+        coin.innerText = coinEmojis[Math.floor(Math.random() * coinEmojis.length)];
+        document.body.appendChild(coin);
+    }
 
-    <div class="input-group">
-        <input type="text" id="userName" placeholder="이름+날짜를 입력하세요!">
+    // 유머용 가짜 실시간 접속자 수 (진짜 데이터 아님, 그냥 놀리는 용도)
+    setInterval(() => {
+        const el = document.getElementById('liveCount');
+        if (el) el.innerText = 20 + Math.floor(Math.random() * 60);
+    }, 2500);
+</script>
+
+<div class="ad-marquee"><span>🔥 실시간 대박 당첨! 익명님 300점 잭팟 터짐!! 🔥 지금 아니면 늦습니다!! 🔥 100% 확률 조작 없음(진짜임)!! 🔥 오늘의 운세 최고조!! 🔥</span></div>
+
+<div class="card neon">
+    <div class="hot-badge">대박 HOT🔥</div>
+    <a class="back-link" href="index.html">← 메인으로</a>
+    <h3>🎰 와글노름꾼 💸</h3>
+    <div class="subtitle">제로에 걸어 제로에~~~!!!</div>
+    <div class="live-counter"><span class="dot"></span>지금 <span id="liveCount">37</span>명이 접속 중!</div>
+
+    <div class="field-row">
+        <div class="field">
+            <label>날짜</label>
+            <input type="date" id="playDate">
+        </div>
+        <div class="field">
+            <label>이름</label>
+            <select id="userName">
+                <option value="" disabled selected>불러오는 중...</option>
+            </select>
+        </div>
     </div>
 
     <div class="roulette-wrapper">
@@ -220,19 +353,18 @@
     </div>
 
     <div id="loading">결과를 불러오는 중...🚀</div>
-    <button class="spin-btn" id="spinBtn" onclick="spin()">
+    <button class="btn-spin" id="spinBtn" onclick="spin()">
         돌리기!
-        <span style="display: block; font-size: 9px; font-weight: normal; margin-top: 4px; opacity: 0.85;">
-            룰렛 티켓 있는 사람만 돌려
-        </span>
+        <span class="btn-hint">룰렛 티켓 있는 사람만 돌려</span>
     </button>
+    <div class="trust-footer">✅ 100% 안전 인증 · 먹튀 걱정 NO · 전액 감정구슬 지급 보장</div>
+</div>
 
-    <div class="ranking-board">
-        <div class="ranking-title">🏆 걸어걸어 🏆</div>
-        <ul class="ranking-list" id="rankingList">
-            <li>데이터를 불러오는 중...</li>
-        </ul>
-    </div>
+<div class="card">
+    <div class="ranking-title">🏆 걸어걸어 🏆</div>
+    <ul class="ranking-list" id="rankingList">
+        <li>데이터를 불러오는 중...</li>
+    </ul>
 </div>
 
 <script>
@@ -241,15 +373,46 @@
     const canvas = document.getElementById('wheel');
     const ctx = canvas.getContext('2d');
     const userNameInput = document.getElementById('userName');
+    const playDateInput = document.getElementById('playDate');
 
-    const savedName = localStorage.getItem('rouletteUserName');
-    if (savedName) {
-        userNameInput.value = savedName;
+    // 날짜는 오늘 날짜를 기본값으로
+    playDateInput.value = new Date().toLocaleDateString('sv-SE');
+
+    // 팀 이모지 매핑 (드롭다운 표시용)
+    const TEAM_EMOJI = {
+        '생글이팀': '💛',
+        '당당이팀': '💚',
+        '포근이팀': '💙',
+        '중심이팀': '💜',
+        '불끈이팀': '❤️',
+    };
+
+    async function loadWaglerOptions() {
+        try {
+            const response = await fetch('/api/waglerList');
+            const waglers = await response.json();
+            if (!response.ok) throw new Error(waglers.error || '명단 불러오기 실패');
+
+            const saved = localStorage.getItem('rouletteUserName');
+            userNameInput.innerHTML = '<option value="" disabled selected>이름을 선택하세요</option>' +
+                waglers.map(w => {
+                    const emoji = TEAM_EMOJI[w.team] || '';
+                    return `<option value="${w.name}">${w.name} (${emoji} ${w.team || '팀 미정'})</option>`;
+                }).join('');
+
+            if (saved && waglers.some(w => w.name === saved)) {
+                userNameInput.value = saved;
+            }
+        } catch (err) {
+            userNameInput.innerHTML = '<option value="" disabled selected>불러오는 중...</option>';
+        }
     }
 
-    userNameInput.addEventListener('input', (e) => {
+    userNameInput.addEventListener('change', (e) => {
         localStorage.setItem('rouletteUserName', e.target.value);
     });
+
+    loadWaglerOptions();
 
     const slices = [
         { name: "💎 300", weight: 4, color1: "#ff0844", color2: "#ffb199" },
@@ -307,14 +470,14 @@
             ctx.textAlign = "right";
             ctx.fillStyle = "#fff";
 
-            const fontSize = slices[i].weight <= 6 ? 11 : 13;
-            ctx.font = `bold ${fontSize}px 'Orbit', 'Apple SD Gothic Neo', 'Jua', sans-serif`;
+            const fontSize = slices[i].weight <= 6 ? 14 : 17;
+            ctx.font = `bold ${fontSize}px 'Orbit', -apple-system, sans-serif`;
             ctx.shadowColor = "rgba(0,0,0,0.6)";
             ctx.shadowBlur = 4;
 
             if (slices[i].lines) {
-                ctx.fillText(slices[i].lines[0], radius - 15, -6);
-                ctx.fillText(slices[i].lines[1], radius - 15, 12);
+                ctx.fillText(slices[i].lines[0], radius - 15, -8);
+                ctx.fillText(slices[i].lines[1], radius - 15, 15);
             } else {
                 ctx.fillText(slices[i].name, radius - 15, 4);
             }
@@ -356,11 +519,20 @@
     loadRankings();
 
     async function spin() {
-        const userName = userNameInput.value.trim();
-        if (!userName) {
-            alert("이름을 먼저 입력해주세요!");
+        const rawName = userNameInput.value.trim();
+        const dateValue = playDateInput.value; // YYYY-MM-DD
+
+        if (!rawName) {
+            alert("이름을 먼저 선택해주세요!");
             return;
         }
+        if (!dateValue) {
+            alert("날짜를 먼저 선택해주세요!");
+            return;
+        }
+
+        const [, mm, dd] = dateValue.split('-');
+        const userName = `${mm}${dd} ${rawName}`; // 예: "0801 홍길동"
 
         if (isSpinning) return;
         isSpinning = true;
@@ -403,6 +575,7 @@
                 alert(`🎉 축하합니다! [${userName}]님, ${msgScore} 당첨!`);
                 loadRankings();
                 isSpinning = false;
+                spinBtn.disabled = false;
             }, 4000);
 
         } catch (error) {
