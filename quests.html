@@ -356,7 +356,7 @@
             document.getElementById('sName').innerText = `${data.name} · ${data.team || '팀 미정'}`;
             document.getElementById('sTotal').innerText = `${data.totalScore}점`;
             document.getElementById('weekTable').innerHTML = `
-                <tr><td>5월 포인트</td><td class="pt">+${data.mayPoints}점</td></tr>
+                ${data.monthlyPoints.map(m => `<tr><td>${m.name}</td><td class="pt">+${m.points}점</td></tr>`).join('')}
                 ${data.weeks.map(w => `<tr><td>${w.name}</td><td class="pt">+${w.points}점</td></tr>`).join('')}
             `;
             summary.classList.add('visible');

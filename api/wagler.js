@@ -143,15 +143,21 @@ export default async function handler(req, res) {
 
             const questPointsMap = await fetchQuestPointsMap(headers, QUEST_DB_ID);
             const weeks = extractWeeks(page, questPointsMap);
-            const mayPoints = page.properties['5월 포인트']?.number ?? 0;
-            const totalScore = mayPoints + weeks.reduce((sum, w) => sum + w.points, 0);
+
+            // "N월 포인트" 형태의 숫자 속성을 실제 존재하는 것만 동적으로 찾음 (하드코딩 X)
+            const monthlyPoints = Object.entries(page.properties)
+                .filter(([propName, prop]) => prop.type === 'number' && /\d+월\s*포인트/.test(propName))
+                .map(([propName, prop]) => ({ name: propName, points: prop.number ?? 0 }));
+
+            const monthlyPointsTotal = monthlyPoints.reduce((sum, m) => sum + m.points, 0);
+            const totalScore = monthlyPointsTotal + weeks.reduce((sum, w) => sum + w.points, 0);
             const teamNameMap = await resolveRelationTitles(headers, [page], '팀');
 
             return res.status(200).json({
                 pageId: page.id,
                 name: page.properties['와글러']?.title?.[0]?.plain_text || name,
                 team: extractTeamName(page.properties['팀'], teamNameMap),
-                mayPoints,
+                monthlyPoints,
                 weeks,
                 totalScore,
             });
