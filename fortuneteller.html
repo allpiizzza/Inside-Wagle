@@ -22,6 +22,7 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
+            min-height: 100dvh;
             margin: 0;
             padding: 15px;
             position: relative;
@@ -286,6 +287,10 @@
                 당첨 화면을 캡쳐 인증하세요!
             </span>
         </div>
+
+        <button id="copyBtn" onclick="shareResult()" style="margin-top: 14px; background: linear-gradient(135deg, #6c5ce7, #a370f7); box-shadow: 0 6px 16px rgba(108, 92, 231, 0.3);">
+            공유하기 🔗
+        </button>
     </div>
 </div>
 
@@ -460,6 +465,63 @@
 
         // 결과 카드 보여주기
         resultCard.style.display = 'block';
+    }
+
+    // 결과 카드 내용을 조합해서 공유하기 (지원 안 되면 복사로 대체)
+    function shareResult() {
+        const title = document.getElementById('resultTitle').innerText;
+        const team = document.getElementById('teamBadge').innerText;
+        const val = document.getElementById('valMsg').innerText;
+        const quote = document.getElementById('quoteMsg').innerText;
+        const keyword = document.getElementById('keywordMsg').innerText;
+        const item = document.getElementById('itemMsg').innerText;
+        const ticket = document.getElementById('ticketBox').style.display === 'block'
+            ? `\n🎉 럭키 찬스 당첨! ${document.getElementById('ticketName').innerText}`
+            : '';
+
+        const text = `${title}\n(${team})\n\n🍀 오늘의 행운 운세\n${val}\n\n🕯️ 오늘의 철학 한 줄\n${quote}\n\n🔑 행운의 독서 키워드\n${keyword}\n\n🎁 오늘의 독서 아이템\n${item}${ticket}`;
+
+        const copyBtn = document.getElementById('copyBtn');
+        const flashMessage = (msg) => {
+            const original = copyBtn.innerText;
+            copyBtn.innerText = msg;
+            setTimeout(() => { copyBtn.innerText = original; }, 1500);
+        };
+
+        // 1순위: 모바일 브라우저의 네이티브 공유 시트 (카카오톡 등으로 바로 공유 가능)
+        if (navigator.share) {
+            navigator.share({ title: '와글의 운세', text }).catch(() => {
+                // 사용자가 공유를 취소한 경우 등은 조용히 무시
+            });
+            return;
+        }
+
+        // 2순위: 공유가 지원되지 않는 환경(주로 데스크탑)에서는 클립보드 복사로 대체
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text)
+                .then(() => flashMessage('복사됐어요! ✅'))
+                .catch(() => fallbackCopy(text, () => flashMessage('복사됐어요! ✅')));
+        } else {
+            fallbackCopy(text, () => flashMessage('복사됐어요! ✅'));
+        }
+    }
+
+    // 클립보드 API를 지원하지 않는 구형 브라우저용 대체 복사 방식
+    function fallbackCopy(text, onSuccess) {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        try {
+            document.execCommand('copy');
+            onSuccess();
+        } catch (err) {
+            alert('복사에 실패했어요. 직접 선택해서 복사해주세요.');
+        }
+        document.body.removeChild(textarea);
     }
 
     // 창이 로드될 때 데이터 불러오기
