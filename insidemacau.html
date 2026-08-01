@@ -504,7 +504,7 @@
 
     async function loadRankings() {
         try {
-            const response = await fetch(`${GAS_URL}?action=getRank`);
+            const response = await fetch(`${GAS_URL}?action=getRank&t=${Date.now()}`, { cache: 'no-store' });
             const rankings = await response.json();
 
             const list = document.getElementById('rankingList');
@@ -557,7 +557,7 @@
         loading.style.display = 'block';
 
         try {
-            const response = await fetch(`${GAS_URL}?action=spin&name=${encodeURIComponent(userName)}`);
+            const response = await fetch(`${GAS_URL}?action=spin&name=${encodeURIComponent(userName)}`, { cache: 'no-store' });
             const data = await response.json();
 
             loading.style.display = 'none';
