@@ -118,6 +118,49 @@
         }
         .week-table td.pt { text-align: right; color: #6c5ce7; font-weight: 700; }
 
+        .quest-dropdown {
+            display: none;
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: #fff;
+            border: 1.5px solid #6c5ce7;
+            border-radius: 8px;
+            margin-top: 4px;
+            max-height: 220px;
+            overflow-y: auto;
+            z-index: 30;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.1);
+        }
+        .quest-dropdown.open { display: block; }
+        .quest-dropdown-item {
+            padding: 9px 10px;
+            font-size: 13px;
+            color: #333;
+            cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            gap: 8px;
+            border-bottom: 1px solid #f1f0ed;
+        }
+        .quest-dropdown-item:last-child { border-bottom: none; }
+        .quest-dropdown-item:hover,
+        .quest-dropdown-item.highlighted {
+            background: #f6f3ff;
+        }
+        .quest-dropdown-item .qd-points {
+            color: #6c5ce7;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .quest-dropdown-empty {
+            padding: 10px;
+            font-size: 12px;
+            color: #aaa;
+            text-align: center;
+        }
+
         .catalog {
             border: 1.5px solid #edece9;
             border-radius: 10px;
@@ -162,7 +205,7 @@
 <div class="card">
     <a class="back-link" href="index.html">← 메인으로</a>
     <h3>🎯 퀘스트 인증하기</h3>
-    <div class="subtitle">✨️ 달성한 퀘스트를 인증하세요. 팀의 점수가 왕창 올라갑니다 ✈️</div>
+    <div class="subtitle">✋ 별도 검토 없이 서로 믿고 진행하는 룰이에요</div>
 
     <div class="field">
         <label>1. 팀</label>
@@ -183,11 +226,10 @@
         </select>
     </div>
 
-    <div class="field">
+    <div class="field" style="position: relative;">
         <label>3. 퀘스트</label>
-        <select id="qQuest">
-            <option value="" disabled selected>불러오는 중...</option>
-        </select>
+        <input type="text" id="qQuestSearch" placeholder="퀘스트 검색 또는 선택 (점수 높은 순)" autocomplete="off">
+        <div class="quest-dropdown" id="qQuestDropdown"></div>
     </div>
 
     <div class="field">
@@ -203,7 +245,7 @@
 
 <div class="card">
     <h3>📊 내 점수 확인</h3>
-    <div class="subtitle">위에서 팀/이름을 선택했다면 그대로 불러올 수 있어요</div>
+    <div class="subtitle">위에서 팀/이름을 입력했다면 그대로 불러올 수 있어요</div>
     <button id="wLoadBtn" class="btn btn-secondary" onclick="loadMyScore()">내 점수 불러오기</button>
     <div id="wLoadStatus" class="status-msg"></div>
 
@@ -231,17 +273,64 @@
 
     // (퀘스트 목록은 loadActiveQuests/loadCatalog가 각자 필요한 형태로 따로 불러와요)
 
+    let activeQuests = []; // 점수 내림차순 정렬된 진행중 퀘스트 목록
+    let selectedQuestId = '';
+
     async function loadActiveQuests() {
-        const select = document.getElementById('qQuest');
+        const searchInput = document.getElementById('qQuestSearch');
         try {
             const response = await fetch(`${API_CATALOG}?active=true`);
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || '불러오기 실패');
-            select.innerHTML = '<option value="" disabled selected>퀘스트를 선택하세요</option>' +
-                data.map(q => `<option value="${q.id}" data-points="${q.points}">${q.name} (+${q.points}점)</option>`).join('');
+            activeQuests = [...data].sort((a, b) => b.points - a.points);
+            searchInput.placeholder = '퀘스트 검색 또는 선택 (점수 높은 순)';
         } catch (err) {
-            select.innerHTML = '<option value="" disabled selected>불러오기 실패</option>';
+            searchInput.placeholder = '불러오기 실패';
         }
+    }
+
+    function renderQuestDropdown(filterText) {
+        const dropdown = document.getElementById('qQuestDropdown');
+        const query = (filterText || '').trim().toLowerCase();
+        const filtered = query
+            ? activeQuests.filter(q => q.name.toLowerCase().includes(query))
+            : activeQuests;
+
+        if (!filtered.length) {
+            dropdown.innerHTML = '<div class="quest-dropdown-empty">일치하는 퀘스트가 없어요</div>';
+        } else {
+            dropdown.innerHTML = filtered.map(q => `
+                <div class="quest-dropdown-item" data-id="${q.id}" data-name="${q.name}" data-points="${q.points}">
+                    <span>${q.name}</span>
+                    <span class="qd-points">+${q.points}점</span>
+                </div>
+            `).join('');
+        }
+        dropdown.classList.add('open');
+    }
+
+    function setupQuestSearch() {
+        const searchInput = document.getElementById('qQuestSearch');
+        const dropdown = document.getElementById('qQuestDropdown');
+
+        searchInput.addEventListener('focus', () => renderQuestDropdown(searchInput.value));
+        searchInput.addEventListener('input', () => {
+            selectedQuestId = ''; // 텍스트를 다시 고치면 선택은 무효화
+            renderQuestDropdown(searchInput.value);
+        });
+
+        dropdown.addEventListener('mousedown', (e) => {
+            // blur보다 먼저 실행되도록 mousedown에서 처리
+            const item = e.target.closest('.quest-dropdown-item');
+            if (!item) return;
+            selectedQuestId = item.dataset.id;
+            searchInput.value = `${item.dataset.name} (+${item.dataset.points}점)`;
+            dropdown.classList.remove('open');
+        });
+
+        searchInput.addEventListener('blur', () => {
+            setTimeout(() => dropdown.classList.remove('open'), 150);
+        });
     }
 
     async function loadCatalog() {
@@ -282,19 +371,19 @@
     async function submitQuest() {
         const teamInput = document.getElementById('qTeam');
         const nameInput = document.getElementById('qName');
-        const questSelect = document.getElementById('qQuest');
+        const questSearchInput = document.getElementById('qQuestSearch');
         const weekSelect = document.getElementById('qWeek');
         const btn = document.getElementById('qSubmitBtn');
         const status = document.getElementById('qSubmitStatus');
 
         const team = teamInput.value;
         const name = nameInput.value.trim();
-        const questId = questSelect.value;
+        const questId = selectedQuestId;
         const week = weekSelect.value;
 
         if (!team) { alert('팀을 선택해주세요!'); teamInput.focus(); return; }
         if (!name) { alert('와글러 이름을 입력해주세요!'); nameInput.focus(); return; }
-        if (!questId) { alert('퀘스트를 선택해주세요!'); questSelect.focus(); return; }
+        if (!questId) { alert('목록에서 퀘스트를 선택해주세요!'); questSearchInput.focus(); return; }
         if (!week) { alert('주차를 선택해주세요!'); weekSelect.focus(); return; }
 
         btn.disabled = true;
@@ -309,7 +398,7 @@
                 body: JSON.stringify({ name, team, week, questId }),
             });
             const data = await response.json();
-            if (!response.ok) throw new Error(data.error || '호출에 실패했어요.');
+            if (!response.ok) throw new Error(data.error || '제출에 실패했어요.');
 
             if (data.alreadyExists) {
                 status.className = 'status-msg';
@@ -404,6 +493,7 @@
         }
     }
 
+    setupQuestSearch();
     loadActiveQuests();
     loadCatalog();
     loadWeeks();
