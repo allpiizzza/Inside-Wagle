@@ -228,14 +228,14 @@
 
     <div class="field" style="position: relative;">
         <label>3. 퀘스트</label>
-        <input type="text" id="qQuestSearch" placeholder="퀘스트 검색 또는 선택 (점수 높은 순)" autocomplete="off">
+        <input type="text" id="qQuestSearch" placeholder="조금만 기다려주세요!! 시스템 열일중 🔥" autocomplete="off">
         <div class="quest-dropdown" id="qQuestDropdown"></div>
     </div>
 
     <div class="field">
         <label>4. 주차</label>
         <select id="qWeek">
-            <option value="" disabled selected>불러오는 중...</option>
+            <option value="" disabled selected>조금만 기다려주세요!! 시스템 열일중 🔥</option>
         </select>
     </div>
 
@@ -262,7 +262,7 @@
     <h3>📜 퀘스트 전체 목록</h3>
     <details class="catalog">
         <summary>진행 중 / 종료된 퀘스트 다 보기</summary>
-        <div class="catalog-body" id="catalogBody">불러오는 중...</div>
+        <div class="catalog-body" id="catalogBody">조금만 기다려주세요!! 시스템 열일중 🔥</div>
     </details>
 </div>
 
@@ -274,6 +274,7 @@
     // (퀘스트 목록은 loadActiveQuests/loadCatalog가 각자 필요한 형태로 따로 불러와요)
 
     let activeQuests = []; // 점수 내림차순 정렬된 진행중 퀘스트 목록
+    let questsLoaded = false;
     let selectedQuestId = '';
 
     async function loadActiveQuests() {
@@ -283,9 +284,17 @@
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || '불러오기 실패');
             activeQuests = [...data].sort((a, b) => b.points - a.points);
-            searchInput.placeholder = '퀘스트 검색 또는 선택 (점수 높은 순)';
+            questsLoaded = true;
+            searchInput.placeholder = '퀘스트명을 입력해주세요';
+
+            // 데이터가 늦게 도착했을 때, 이미 포커스돼있거나 드롭다운이 열려있는 상태라면
+            // 빈 목록으로 남아있지 않도록 다시 그려줌
+            const dropdown = document.getElementById('qQuestDropdown');
+            if (document.activeElement === searchInput || dropdown.classList.contains('open')) {
+                renderQuestDropdown(searchInput.value);
+            }
         } catch (err) {
-            searchInput.placeholder = '불러오기 실패';
+            searchInput.placeholder = '불러오기 실패. 조금 있다가 다시 시도해주세요';
         }
     }
 
@@ -297,7 +306,7 @@
             : activeQuests;
 
         if (!filtered.length) {
-            dropdown.innerHTML = '<div class="quest-dropdown-empty">일치하는 퀘스트가 없어요</div>';
+            dropdown.innerHTML = `<div class="quest-dropdown-empty">${questsLoaded ? '일치하는 퀘스트가 없어요' : '조금만 기다려주세요!! 시스템 열일중 🔥'}</div>`;
         } else {
             dropdown.innerHTML = filtered.map(q => `
                 <div class="quest-dropdown-item" data-id="${q.id}" data-name="${q.name}" data-points="${q.points}">
@@ -364,7 +373,7 @@
             select.innerHTML = '<option value="" disabled selected>주차를 선택하세요</option>' +
                 weeks.map(w => `<option value="${w}">${w}</option>`).join('');
         } catch (err) {
-            select.innerHTML = '<option value="" disabled selected>불러오기 실패</option>';
+            select.innerHTML = '<option value="" disabled selected>불러오기 실패. 조금 있다가 다시 시도해주세요</option>';
         }
     }
 
@@ -431,7 +440,7 @@
         if (!name) { alert('위에서 이름을 먼저 입력해주세요!'); return; }
 
         btn.disabled = true;
-        btn.innerText = '불러오는 중...';
+        btn.innerText = '조금만 기다려주세요!! 시스템 열일중 🔥';
         status.className = 'status-msg';
         status.innerText = '';
 
