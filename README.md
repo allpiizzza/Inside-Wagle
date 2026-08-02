@@ -36,6 +36,8 @@ Vercel 환경변수에 넣어주면 돼요:
 - `NOTION_WAGLER_DB_ID` = 와글러 DB의 ID
 - `NOTION_QUEST_DB_ID` = 퀘스트 DB의 ID
 - `NOTION_DATABASE_ID` = 기억구슬 DB의 ID
+- `NOTION_FORTUNE_QUOTES_DB_ID` = 운세 인용문 DB의 ID
+- `NOTION_FORTUNE_ITEMS_DB_ID` = 운세 아이템 DB의 ID
 
 롤업 속성은 따로 안 만드셔도 돼요 — 점수 합산은 서버에서 매번 계산해서 보여줘요.
 
