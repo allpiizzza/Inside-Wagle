@@ -279,6 +279,26 @@
         return points >= 0 ? `+${points}점` : `${points}점`;
     }
 
+    // 점수 내림차순 → 이름순 정렬 (단, "이름 (월)", "이름 (화)" 같은 요일 표기는
+    // 가나다순이 아니라 월화수목금토일 순서로 정렬되게 처리)
+    const DAY_ORDER = ['월', '화', '수', '목', '금', '토', '일'];
+
+    function questSortKey(name) {
+        const match = name.match(/\(([월화수목금토일])\)\s*$/);
+        if (match) {
+            return { base: name.slice(0, match.index).trim(), dayIndex: DAY_ORDER.indexOf(match[1]) };
+        }
+        return { base: name, dayIndex: -1 };
+    }
+
+    function compareQuests(a, b) {
+        if (b.points !== a.points) return b.points - a.points;
+        const ka = questSortKey(a.name);
+        const kb = questSortKey(b.name);
+        if (ka.base !== kb.base) return ka.base.localeCompare(kb.base, 'ko');
+        return ka.dayIndex - kb.dayIndex;
+    }
+
     const API_WAGLER = '/api/wagler';
     const API_CATALOG = '/api/questCatalog';
     const API_WEEKS = '/api/weeks';
@@ -295,7 +315,7 @@
             const response = await fetch(`${API_CATALOG}?active=true`);
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || '불러오기 실패');
-            activeQuests = [...data].sort((a, b) => b.points - a.points);
+            activeQuests = [...data].sort(compareQuests);
             questsLoaded = true;
             searchInput.placeholder = '퀘스트명을 입력해주세요';
 
