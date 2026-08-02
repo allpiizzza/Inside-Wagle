@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🥠와글의 운세🔮</title>
+    <style>
+        :root {
+            --joy-bg: #fffde7; --joy-main: #f1c40f; --joy-border: #f39c12;
+            --disgust-bg: #e8f8f5; --disgust-main: #2ecc71; --disgust-border: #27ae60;
+            --sadness-bg: #ebf5fb; --sadness-main: #3498db; --sadness-border: #2980b9;
+            --fear-bg: #f4ecf7; --fear-main: #a55eea; --fear-border: #8e44ad;
+            --anger-bg: #ffeaa7; --anger-main: #ff7675; --anger-border: #d63031;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background: linear-gradient(135deg, #2b1055 0%, #6c5ce7 50%, #a8c0ff 100%);
+            color: #37352f;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            min-height: 100dvh;
+            margin: 0;
+            padding: 15px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        /* 신비로운 별/달/구슬 장식 */
+        .float-mystic {
+            position: absolute;
+            font-size: 20px;
+            opacity: 0.55;
+            animation-name: floaty;
+            animation-timing-function: ease-in-out;
+            animation-iteration-count: infinite;
+            animation-direction: alternate;
+            z-index: 0;
+            pointer-events: none;
+        }
+        @keyframes floaty {
+            0%   { transform: translateY(0px) translateX(0px); }
+            100% { transform: translateY(-16px) translateX(6px); }
+        }
+
+        .widget-container {
+            position: relative;
+            z-index: 1;
+            background: rgba(255, 255, 255, 0.92);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(43, 16, 85, 0.35);
+            border: 2px solid rgba(255, 255, 255, 0.7);
+            width: 100%;
+            max-width: 420px;
+            padding: 24px;
+            box-sizing: border-box;
+            text-align: center;
+        }
+
+        .back-link {
+            font-size: 12px;
+            color: #888;
+            text-decoration: none;
+            display: block;
+            text-align: left;
+            margin-bottom: 4px;
+        }
+
+        .header { margin-bottom: 20px; }
+        .header h1 {
+            font-size: 18px;
+            color: #2c3e50;
+            margin: 0 0 6px 0;
+            background: linear-gradient(to right, #6c5ce7, #ff7675);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: 800;
+        }
+        .header p { font-size: 12px; color: #888; margin: 0; font-weight: 600; }
+
+        .form-group { margin-bottom: 16px; text-align: left; }
+        label { display: block; font-size: 12px; font-weight: 700; color: #555; margin-bottom: 6px; }
+
+        select {
+            width: 100%;
+            padding: 9px 10px;
+            border: 1.5px solid #edece9;
+            border-radius: 8px;
+            font-size: 14px;
+            font-family: inherit;
+            outline: none;
+            box-sizing: border-box;
+            background-color: #fff;
+            font-weight: 600;
+            color: #222;
+            transition: border-color 0.2s ease;
+        }
+
+        select:focus { border-color: #6c5ce7; }
+
+        button {
+            width: 100%;
+            padding: 13px;
+            background: linear-gradient(135deg, #a370f7, #6c5ce7);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 6px 16px rgba(108, 92, 231, 0.35);
+            transition: transform 0.15s ease;
+        }
+
+        button:active { transform: scale(0.97); }
+        button:disabled {
+            background: #e2e1de;
+            color: #a09f9c;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+
+        .result-card {
+            margin-top: 20px;
+            padding: 20px;
+            border-radius: 14px;
+            background: #fff;
+            border: 2px solid #edece9;
+            display: none;
+            animation: popIn 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            text-align: left;
+        }
+
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(0.9); }
+            to { opacity: 1; transform: scale(1); }
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 800;
+            color: white;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+
+        .result-title { font-size: 15px; font-weight: 800; margin-bottom: 14px; color: #2d3436; }
+        .result-item { font-size: 13px; color: #2d3436; line-height: 1.6; margin-bottom: 12px; }
+
+        .quote-box {
+            background-color: #faf9f6;
+            border-left: 4px solid #a29bfe;
+            padding: 10px 14px;
+            font-style: italic;
+            font-size: 12px;
+            color: #4a5568;
+            margin-top: 6px;
+            border-radius: 8px;
+            line-height: 1.5;
+        }
+
+        .special-ticket {
+            margin-top: 16px;
+            padding: 14px;
+            background: linear-gradient(135deg, #ffeaa7, #fab1a0);
+            border: 2px dashed #d63031;
+            border-radius: 12px;
+            text-align: center;
+            font-weight: 800;
+            color: #d63031;
+            font-size: 14px;
+            display: none;
+            animation: bounce 0.6s ease infinite alternate;
+        }
+
+        @keyframes bounce {
+            from { transform: translateY(0); }
+            to { transform: translateY(-4px); }
+        }
+
+        /* 팀별 테마 (색톤 유지) */
+        .theme-생글이 { border-color: var(--joy-main); background-color: var(--joy-bg); }
+        .badge-생글이 { background-color: var(--joy-main); color: #333; }
+
+        .theme-당당이 { border-color: var(--disgust-main); background-color: var(--disgust-bg); }
+        .badge-당당이 { background-color: var(--disgust-main); }
+
+        .theme-포근이 { border-color: var(--sadness-main); background-color: var(--sadness-bg); }
+        .badge-포근이 { background-color: var(--sadness-main); }
+
+        .theme-중심이 { border-color: var(--fear-main); background-color: var(--fear-bg); }
+        .badge-중심이 { background-color: var(--fear-main); }
+
+        .theme-불끈이 { border-color: var(--anger-main); background-color: var(--anger-bg); }
+        .badge-불끈이 { background-color: var(--anger-main); }
+    </style>
+</head>
+<body>
+
+<script>
+    // 배경에 떠다니는 신비로운 별/달/구슬 장식
+    const mysticEmojis = ['✨', '🌙', '⭐', '🔮', '💫'];
+    for (let i = 0; i < 20; i++) {
+        const el = document.createElement('div');
+        el.className = 'float-mystic';
+        const size = 14 + Math.random() * 16;
+        el.style.fontSize = size + 'px';
+        el.style.left = Math.random() * 92 + 'vw';
+        el.style.top = Math.random() * 92 + 'vh';
+        el.style.opacity = (0.3 + Math.random() * 0.4).toFixed(2);
+        el.style.animationDuration = (3 + Math.random() * 3) + 's';
+        el.style.animationDelay = (Math.random() * 2) + 's';
+        el.innerText = mysticEmojis[Math.floor(Math.random() * mysticEmojis.length)];
+        document.body.appendChild(el);
+    }
+</script>
+
+
+<div class="widget-container">
+    <a class="back-link" href="index.html">← 메인으로</a>
+    <div class="header">
+        <h1 id="todayTitle">📖 와글의 운세</h1>
+        <p>오늘 나를 이끄는 가치관과 행운의 독서 아이템! 🔮</p>
+    </div>
+
+    <div class="form-group">
+        <label for="memberSelect">✨ 닉네임 선택하기</label>
+        <select id="memberSelect">
+            <option value="" disabled selected>✨ 닉네임을 선택하세요 ✨</option>
+            <optgroup label="💛 생글이팀">
+                <option value="따란">따란 (💛 생글이팀)</option>
+                <option value="에스">에스 (💛 생글이팀)</option>
+                <option value="송">송 (💛 생글이팀)</option>
+                <option value="임유월">임유월 (💛 생글이팀)</option>
+                <option value="윤슬">윤슬 (💛 생글이팀)</option>
+            </optgroup>
+            <optgroup label="💚 당당이팀">
+                <option value="당근">당근 (💚 당당이팀)</option>
+                <option value="써니">써니 (💚 당당이팀)</option>
+                <option value="동글">동글 (💚 당당이팀)</option>
+                <option value="구마">구마 (💚 당당이팀)</option>
+                <option value="밍보">밍보 (💚 당당이팀)</option>
+                <option value="스물">스물 (💚 당당이팀)</option>
+            </optgroup>
+            <optgroup label="💙 포근이팀">
+                <option value="최미노">최미노 (💙 포근이팀)</option>
+                <option value="모모">모모 (💙 포근이팀)</option>
+                <option value="초록">초록 (💙 포근이팀)</option>
+                <option value="영원">영원 (💙 포근이팀)</option>
+                <option value="이리">이리 (💙 포근이팀)</option>
+            </optgroup>
+            <optgroup label="💜 중심이팀">
+                <option value="고래">고래 (💜 중심이팀)</option>
+                <option value="오핑">오핑 (💜 중심이팀)</option>
+                <option value="유누">유누 (💜 중심이팀)</option>
+                <option value="새벽">새벽 (💜 중심이팀)</option>
+                <option value="주니">주니 (💜 중심이팀)</option>
+                <option value="수리">수리 (💜 중심이팀)</option>
+                <option value="모아나">모아나 (💜 중심이팀)</option>
+            </optgroup>
+            <optgroup label="❤️ 불끈이팀">
+                <option value="채채">채채 (❤️ 불끈이팀)</option>
+                <option value="신디">신디 (❤️ 불끈이팀)</option>
+                <option value="난수">난수 (❤️ 불끈이팀)</option>
+                <option value="제임스">제임스 (❤️ 불끈이팀)</option>
+                <option value="유재">유재 (❤️ 불끈이팀)</option>
+                <option value="최리">최리 (❤️ 불끈이팀)</option>
+            </optgroup>
+        </select>
+    </div>
+
+    <button id="fortuneBtn" onclick="generateFortune()" disabled>오늘의 가치 운세 뽑기 🎲✨</button>
+
+    <div id="resultCard" class="result-card">
+        <span id="teamBadge" class="badge">팀 이름</span>
+        <div id="resultTitle" class="result-title"></div>
+        <div class="result-item">🍀 <strong>오늘의 행운 운세:</strong> <br><span id="valMsg"></span></div>
+        <div class="result-item">🕯️ <strong>오늘의 철학 한 줄:</strong> <div class="quote-box" id="quoteMsg"></div></div>
+        <div class="result-item">🔑 <strong>행운의 독서 키워드:</strong> <span id="keywordMsg"></span></div>
+        <div class="result-item">🎁 <strong>오늘의 독서 아이템:</strong> <span id="itemMsg"></span></div>
+
+        <div id="ticketBox" class="special-ticket">
+            🎉 <strong>럭키 찬스 당첨!</strong><br><span id="ticketName"></span>
+            <span style="font-size: 11px; font-weight: normal; opacity: 0.8; display: inline-block; margin-top: 6px;">
+                당첨 화면을 캡쳐 인증하세요!
+            </span>
+            <div style="font-size: 12px; font-weight: 700; color: #d63031; margin-top: 10px;">
+                📌 뽑은 아이템은 본방에 공유하고 즉시 사용 필수!
+            </div>
+        </div>
+
+        <button id="copyBtn" onclick="shareResult()" style="margin-top: 14px; background: linear-gradient(135deg, #6c5ce7, #a370f7); box-shadow: 0 6px 16px rgba(108, 92, 231, 0.3);">
+            공유하기 🔗
+        </button>
+    </div>
+</div>
+
+<script>
+    // 날짜를 정확하게 KST(한국 시간) 기준으로 가져오는 함수
+    // 주의: new Date(now.getTime() + 9시간)을 만든 뒤 .getMonth()/.getDate()로 읽으면
+    // 브라우저의 로컬 타임존이 이미 KST일 경우 9시간이 중복 적용돼서 하루가 밀리는 버그가 있었음.
+    // toISOString()은 항상 UTC 기준으로 문자열을 만들기 때문에, "UTC시간+9시간"을 그 방식으로 읽으면
+    // 로컬 타임존과 무관하게 정확한 KST 날짜를 얻을 수 있음.
+    function getKstDateParts() {
+        const now = new Date();
+        const kstOffset = 9 * 60 * 60 * 1000;
+        const kstShifted = new Date(now.getTime() + kstOffset);
+        const isoDate = kstShifted.toISOString().split('T')[0]; // YYYY-MM-DD (KST 기준 날짜)
+        const [year, month, day] = isoDate.split('-');
+        return { isoDate, year, month, day };
+    }
+
+    function getTodayFormatted() {
+        const { month, day } = getKstDateParts();
+        return `${month}월 ${day}일`;
+    }
+
+    const API_FORTUNE = '/api/fortune';
+
+    let quotesData = [];
+    let itemsData = [];
+
+    // 페이지 로드 시 상단 타이틀 세팅
+    document.getElementById('todayTitle').innerText = `📖 ${getTodayFormatted()} 와글의 운세`;
+
+    const members = {
+        '따란': { team: '생글이', values: ['사랑', '감사', '웃음', '즐거움', '우정'] },
+        '에스': { team: '생글이', values: ['진심', '공감', '자유', '행복', '기쁨'] },
+        '송': { team: '생글이', values: ['자유', '자율성', '이해', '인식', '재미'] },
+        '임유월': { team: '생글이', values: ['행복', '기쁨', '방향성', '자유', '참됨'] },
+        '윤슬': { team: '생글이', values: ['행복', '즐거움', '목적의식', '여유', '열정'] },
+        '당근': { team: '당당이', values: ['솔직함', '안정', '시도', '자존감', '추진력'] },
+        '써니': { team: '당당이', values: ['행복', '이해', '사랑', '시도', '자존감'] },
+        '동글': { team: '당당이', values: ['성공', '안정', '풍요', '자존감', '행복'] },
+        '구마': { team: '당당이', values: ['행복', '성실', '안정', '확신', '재미'] },
+        '밍보': { team: '당당이', values: ['즐거움', '안정', '자신감', '예의', '규칙'] },
+        '스물': { team: '당당이', values: ['평안', '신뢰', '만족', '자부심', '기쁨'] },
+        '최미노': { team: '포근이', values: ['사랑', '책임', '약속', '의리', '한결같음'] },
+        '모모': { team: '포근이', values: ['예의', '믿음', '우정', '신뢰', '사랑'] },
+        '초록': { team: '포근이', values: ['정직', '끈기', '지지', '성공', '사랑'] },
+        '영원': { team: '포근이', values: ['신뢰', '이해', '성실', '안정', '시도'] },
+        '이리': { team: '포근이', values: ['사랑', '꿈', '평등', '자유', '재미'] },
+        '고래': { team: '중심이', values: ['책임', '안전', '질서', '통찰력', '성찰'] },
+        '오핑': { team: '중심이', values: ['평안', '여유', '상생', '정의', '즐거움'] },
+        '유누': { team: '중심이', values: ['신뢰', '통찰력', '판단력', '여유', '풍요'] },
+        '새벽': { team: '중심이', values: ['원만함', '잠재력', '안정', '진심', '희망'] },
+        '주니': { team: '중심이', values: ['자유', '깨달음', '행복', '안정', '시도'] },
+        '수리': { team: '중심이', values: ['행복', '평안', '즐거움', '안정', '사랑'] },
+        '모아나': { team: '중심이', values: ['안정', '현명함', '솔직함', '시도', '신뢰'] },
+        '채채': { team: '불끈이', values: ['꿈', '안정', '성실', '자긍심', '성취감'] },
+        '신디': { team: '불끈이', values: ['추진력', '신뢰', '열정', '재미', '깨달음'] },
+        '난수': { team: '불끈이', values: ['자유', '통찰력', '판단력', '방향성', '절제'] },
+        '제임스': { team: '불끈이', values: ['자유', '재미', '목적의식', '인정', '겸허'] },
+        '유재': { team: '불끈이', values: ['정의', '공정', '공존', '존중', '끈기'] },
+        '최리': { team: '불끈이', values: ['성공', '안정', '여유', '풍요', '만족'] }
+    };
+
+    const tickets = [
+        "🎁 [룰렛 1회 이용권] 획득!",
+        "🎫 [프리덤 연속 1회 채움권] 획득!",
+        "📘 [북큐 1회 채움권] 획득!",
+        "📱 [빙봉에게 카톡하기] 획득!",
+        "🤝 [팀원 1명 모아가기] 획득!",
+        "📖 [직전 책 후기페이지 뽀려가기] 획득!",
+        "☔ [축축이면제권^^] 획득!"
+    ];
+
+    // 1. 운세 데이터 가져오기 (Notion DB → /api/fortune)
+    async function loadFortuneData() {
+        const btn = document.getElementById('fortuneBtn');
+        const originalBtnText = btn.innerText;
+        btn.disabled = true;
+        btn.innerText = '조금만 기다려주세요!! 시스템 열일중 🔥';
+
+        try {
+            const response = await fetch(API_FORTUNE);
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || '데이터 조회 실패');
+            quotesData = data.quotes || [];
+            itemsData = data.items || [];
+            console.log("데이터 로딩 완료!");
+        } catch (error) {
+            console.error("데이터 로드 실패:", error);
+        } finally {
+            btn.innerText = originalBtnText;
+            btn.disabled = false;
+        }
+    }
+
+    // 2. 일일 고정 난수 생성 함수
+    function seededRandom(seedString) {
+        let hash = 0;
+        for (let i = 0; i < seedString.length; i++) {
+            hash = ((hash << 5) - hash) + seedString.charCodeAt(i);
+            hash = hash & hash;
+        }
+        let random = (Math.sin(hash) * 10000) % 1;
+        return random < 0 ? random + 1 : random;
+    }
+
+    // 3. 운세 뽑기 실행 함수
+    function generateFortune() {
+        if (quotesData.length === 0 || itemsData.length === 0) {
+            alert("아직 데이터를 불러오는 중입니다. 잠시 후 다시 시도해주세요.");
+            return;
+        }
+
+        const selectedMember = document.getElementById('memberSelect').value;
+        if (!selectedMember) {
+            alert("✨ 먼저 닉네임을 선택해 주세요!");
+            return;
+        }
+
+        const memberInfo = members[selectedMember];
+
+        // 오늘 날짜 가져오기 (KST 기준, 위와 동일한 헬퍼 사용)
+        const today = getKstDateParts().isoDate;
+
+        // '멤버이름 + 오늘날짜'를 시드로 설정
+        const seed = selectedMember + today;
+
+        const valueRandom = seededRandom(seed + "_value");
+        const quoteRandom = seededRandom(seed + "_quote");
+        const itemRandom = seededRandom(seed + "_item");
+
+        const todayValue = memberInfo.values[Math.floor(valueRandom * memberInfo.values.length)];
+        const selectedQuote = quotesData[Math.floor(quoteRandom * quotesData.length)];
+        const selectedItem = itemsData[Math.floor(itemRandom * itemsData.length)];
+
+        // A열 데이터 가져오기 및 \n 기호와 실제 줄바꿈을 <br> 태그로 변환
+        let rawQuote = selectedQuote.nickname || selectedQuote.text || "";
+        let rawItem = selectedItem.name || selectedItem.desc || "";
+
+        const quoteText = rawQuote.replace(/\\n/g, '<br>').replace(/\n/g, '<br>');
+        const itemText = rawItem.replace(/\\n/g, '<br>').replace(/\n/g, '<br>');
+
+        // UI 요소 가져오기
+        const resultCard = document.getElementById('resultCard');
+        const teamBadge = document.getElementById('teamBadge');
+        const resultTitle = document.getElementById('resultTitle');
+        const valMsg = document.getElementById('valMsg');
+        const quoteMsg = document.getElementById('quoteMsg');
+        const keywordMsg = document.getElementById('keywordMsg');
+        const itemMsg = document.getElementById('itemMsg');
+        const ticketBox = document.getElementById('ticketBox');
+
+        // 값 적용하기
+        teamBadge.innerText = memberInfo.team;
+
+        // 상단 타이틀과 동일한 날짜 형식으로 세팅
+        const dateStr = getTodayFormatted();
+        resultTitle.innerText = `🔮 ${dateStr} ${selectedMember}님의 가치 운세 🔮`;
+
+        valMsg.innerText = `오늘은 '${todayValue}'의 에너지가 당신을 감싸는 하루입니다!`;
+        keywordMsg.innerText = `[ ${todayValue} ]`;
+
+        // 브라우저가 <br>을 진짜 줄바꿈으로 인식하도록 innerHTML 사용
+        quoteMsg.innerHTML = quoteText;
+        itemMsg.innerHTML = itemText;
+
+        // 💡 약 10% 확률로 럭키 이용권 당첨 로직 (하루에 한 번 고정)
+        const ticketChanceRandom = seededRandom(seed + "_ticketChance");
+        if (ticketChanceRandom < 0.10) {
+            const ticketPickRandom = seededRandom(seed + "_ticketPick");
+            const ticketName = tickets[Math.floor(ticketPickRandom * tickets.length)];
+            document.getElementById('ticketName').innerText = ticketName;
+            ticketBox.style.display = 'block';
+        } else {
+            ticketBox.style.display = 'none';
+        }
+
+        // 팀별 테마 클래스 적용 (기존 클래스 덮어쓰기)
+        resultCard.className = `result-card theme-${memberInfo.team}`;
+        teamBadge.className = `badge badge-${memberInfo.team}`;
+
+        // 결과 카드 보여주기
+        resultCard.style.display = 'block';
+    }
+
+    // 결과 카드 내용을 조합해서 공유하기 (지원 안 되면 복사로 대체)
+    function shareResult() {
+        const title = document.getElementById('resultTitle').innerText;
+        const team = document.getElementById('teamBadge').innerText;
+        const val = document.getElementById('valMsg').innerText;
+        const quote = document.getElementById('quoteMsg').innerText;
+        const keyword = document.getElementById('keywordMsg').innerText;
+        const item = document.getElementById('itemMsg').innerText;
+        const ticket = document.getElementById('ticketBox').style.display === 'block'
+            ? `\n🎉 럭키 찬스 당첨! ${document.getElementById('ticketName').innerText}`
+            : '';
+
+        const text = `${title}\n(${team})\n\n🍀 오늘의 행운 운세\n${val}\n\n🕯️ 오늘의 철학 한 줄\n${quote}\n\n🔑 행운의 독서 키워드\n${keyword}\n\n🎁 오늘의 독서 아이템\n${item}${ticket}`;
+
+        const copyBtn = document.getElementById('copyBtn');
+        const flashMessage = (msg) => {
+            const original = copyBtn.innerText;
+            copyBtn.innerText = msg;
+            setTimeout(() => { copyBtn.innerText = original; }, 1500);
+        };
+
+        // 1순위: 모바일 브라우저의 네이티브 공유 시트 (카카오톡 등으로 바로 공유 가능)
+        if (navigator.share) {
+            navigator.share({ title: '와글의 운세', text }).catch(() => {
+                // 사용자가 공유를 취소한 경우 등은 조용히 무시
+            });
+            return;
+        }
+
+        // 2순위: 공유가 지원되지 않는 환경(주로 데스크탑)에서는 클립보드 복사로 대체
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(text)
+                .then(() => flashMessage('복사됐어요! ✅'))
+                .catch(() => fallbackCopy(text, () => flashMessage('복사됐어요! ✅')));
+        } else {
+            fallbackCopy(text, () => flashMessage('복사됐어요! ✅'));
+        }
+    }
+
+    // 클립보드 API를 지원하지 않는 구형 브라우저용 대체 복사 방식
+    function fallbackCopy(text, onSuccess) {
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        try {
+            document.execCommand('copy');
+            onSuccess();
+        } catch (err) {
+            alert('복사에 실패했어요. 직접 선택해서 복사해주세요.');
+        }
+        document.body.removeChild(textarea);
+    }
+
+    // 창이 로드될 때 데이터 불러오기
+    // 스크립트는 body 맨 아래에 있어 이 시점에 DOM은 이미 준비돼있음.
+    // window.onload(이미지/폰트 등 모든 리소스 로딩 완료)까지 기다리지 않고 바로 데이터 요청 시작.
+    loadFortuneData();
+</script>
+
+</body>
+</html>
