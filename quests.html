@@ -268,6 +268,12 @@
 </div>
 
 <script>
+    // 터치(모바일) 환경에서는 자동 포커스 이동이 오히려 방해가 되므로,
+    // 마우스 같은 정밀 포인터 환경(PC)에서만 자동 이동시킴
+    function isDesktopPointer() {
+        return window.matchMedia('(pointer: fine)').matches;
+    }
+
     const API_WAGLER = '/api/wagler';
     const API_CATALOG = '/api/questCatalog';
     const API_WEEKS = '/api/weeks';
@@ -322,7 +328,9 @@
     function setupQuestSearch() {
         // 이름을 선택하면 바로 다음 단계(퀘스트 검색창)로 포커스 이동
         document.getElementById('qName').addEventListener('change', () => {
-            document.getElementById('qQuestSearch').focus();
+            if (isDesktopPointer()) {
+                document.getElementById('qQuestSearch').focus();
+            }
         });
 
         const searchInput = document.getElementById('qQuestSearch');
@@ -351,7 +359,9 @@
             selectedQuestId = item.dataset.id;
             searchInput.value = `${item.dataset.name} (+${item.dataset.points}점)`;
             dropdown.classList.remove('open');
-            document.getElementById('qWeek').focus();
+            if (isDesktopPointer()) {
+                document.getElementById('qWeek').focus();
+            }
         });
 
         searchInput.addEventListener('blur', () => {
@@ -519,7 +529,7 @@
 
         if (!members.length) {
             select.innerHTML = '<option value="" disabled selected>불러오는 중...</option>';
-        } else {
+        } else if (isDesktopPointer()) {
             select.focus();
         }
     }
