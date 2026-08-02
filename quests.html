@@ -287,10 +287,10 @@
             questsLoaded = true;
             searchInput.placeholder = '퀘스트명을 입력해주세요';
 
-            // 포커스 이벤트에 의존하지 않고, 데이터가 준비되면 곧바로 목록을 펼쳐 보여줌
-            // (모바일 브라우저의 "다음" 버튼이 select 요소끼리만 이동하고
-            //  이 텍스트 입력창은 건너뛰는 경우가 있어서, focus 이벤트만으로는 불안정했음)
-            if (!selectedQuestId) {
+            // 데이터가 늦게 도착했을 때, 이미 포커스돼있거나 드롭다운이 열려있는 상태라면
+            // 빈 목록으로 남아있지 않도록 다시 그려줌
+            const dropdown = document.getElementById('qQuestDropdown');
+            if (document.activeElement === searchInput || dropdown.classList.contains('open')) {
                 renderQuestDropdown(searchInput.value);
             }
         } catch (err) {
