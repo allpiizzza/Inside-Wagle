@@ -206,7 +206,7 @@
 <div class="card">
     <a class="back-link" href="index.html">← 메인으로</a>
     <h3>🎯 퀘스트 인증하기</h3>
-    <div class="subtitle">✋ 별도 검토 없이 서로 믿고 진행하는 룰이에요</div>
+    <div class="subtitle">✨️ 달성한 퀘스트를 인증하세요. 팀의 점수가 왕창 올라갑니다 ✈️</div>
 
     <div class="field">
         <label>1. 팀</label>
@@ -246,7 +246,7 @@
 
 <div class="card">
     <h3>📊 내 점수 확인</h3>
-    <div class="subtitle">위에서 팀/이름을 입력했다면 그대로 불러올 수 있어요</div>
+    <div class="subtitle">위에서 팀/이름을 선택했다면 그대로 불러올 수 있어요</div>
     <button id="wLoadBtn" class="btn btn-secondary" onclick="loadMyScore()">내 점수 불러오기</button>
     <div id="wLoadStatus" class="status-msg"></div>
 
@@ -272,6 +272,11 @@
     // 마우스 같은 정밀 포인터 환경(PC)에서만 자동 이동시킴
     function isDesktopPointer() {
         return window.matchMedia('(pointer: fine)').matches;
+    }
+
+    // 점수 표시용: 양수/0은 "+n점", 음수는 "-n점" (마이너스 부호가 이미 있으니 +를 또 붙이지 않음)
+    function formatPoints(points) {
+        return points >= 0 ? `+${points}점` : `${points}점`;
     }
 
     const API_WAGLER = '/api/wagler';
@@ -318,7 +323,7 @@
             dropdown.innerHTML = filtered.map(q => `
                 <div class="quest-dropdown-item" data-id="${q.id}" data-name="${q.name}" data-points="${q.points}">
                     <span>${q.name}</span>
-                    <span class="qd-points">+${q.points}점</span>
+                    <span class="qd-points">${formatPoints(q.points)}</span>
                 </div>
             `).join('');
         }
@@ -357,7 +362,7 @@
             const item = e.target.closest('.quest-dropdown-item');
             if (!item) return;
             selectedQuestId = item.dataset.id;
-            searchInput.value = `${item.dataset.name} (+${item.dataset.points}점)`;
+            searchInput.value = `${item.dataset.name} (${formatPoints(Number(item.dataset.points))})`;
             dropdown.classList.remove('open');
             if (isDesktopPointer()) {
                 document.getElementById('qWeek').focus();
@@ -384,7 +389,7 @@
                 <div class="catalog-item ${q.active ? '' : 'inactive'}">
                     <div class="row1">
                         <span class="name">${q.name}</span>
-                        <span class="pt">+${q.points}점</span>
+                        <span class="pt">${formatPoints(q.points)}</span>
                     </div>
                     ${q.condition ? `<div class="cond">${q.condition}</div>` : ''}
                 </div>
@@ -437,7 +442,7 @@
                 body: JSON.stringify({ name, team, week, questId }),
             });
             const data = await response.json();
-            if (!response.ok) throw new Error(data.error || '제출에 실패했어요.');
+            if (!response.ok) throw new Error(data.error || '호출에 실패했어요.');
 
             if (data.alreadyExists) {
                 status.className = 'status-msg';
@@ -484,8 +489,8 @@
             document.getElementById('sName').innerText = `${data.name} · ${data.team || '팀 미정'}`;
             document.getElementById('sTotal').innerText = `${data.totalScore}점`;
             document.getElementById('weekTable').innerHTML = `
-                ${data.monthlyPoints.map(m => `<tr><td>${m.name}</td><td class="pt">+${m.points}점</td></tr>`).join('')}
-                ${data.weeks.map(w => `<tr><td>${w.name}</td><td class="pt">+${w.points}점</td></tr>`).join('')}
+                ${data.monthlyPoints.map(m => `<tr><td>${m.name}</td><td class="pt">${formatPoints(m.points)}</td></tr>`).join('')}
+                ${data.weeks.map(w => `<tr><td>${w.name}</td><td class="pt">${formatPoints(w.points)}</td></tr>`).join('')}
             `;
             summary.classList.add('visible');
         } catch (err) {
