@@ -161,6 +161,27 @@
             text-align: center;
         }
 
+        /* 임시 디버그 로그 패널 (원인 파악 끝나면 삭제 예정) */
+        #debugLog {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            max-height: 140px;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.85);
+            color: #0f0;
+            font-family: monospace;
+            font-size: 11px;
+            padding: 6px 8px;
+            z-index: 9999;
+            white-space: pre-wrap;
+        }
+        #debugLog .debug-title {
+            color: #ff0;
+            font-weight: bold;
+        }
+
         .catalog {
             border: 1.5px solid #edece9;
             border-radius: 10px;
@@ -201,6 +222,8 @@
     </style>
 </head>
 <body>
+<div id="debugLog"><span class="debug-title">🐞 디버그 로그 (탭/포커스 이벤트 기록)</span></div>
+
 
 <div class="card">
     <a class="back-link" href="index.html">← 메인으로</a>
@@ -267,6 +290,28 @@
 </div>
 
 <script>
+    // ---------- 임시 디버그 로그 (원인 파악되면 제거 예정) ----------
+    function debugLog(msg) {
+        const panel = document.getElementById('debugLog');
+        const time = new Date().toLocaleTimeString('ko-KR', { hour12: false });
+        const line = document.createElement('div');
+        line.innerText = `[${time}] ${msg}`;
+        panel.appendChild(line);
+        panel.scrollTop = panel.scrollHeight;
+    }
+
+    // 페이지 전체에서 포커스가 어디로 이동하는지 전부 기록
+    document.addEventListener('focusin', (e) => {
+        const el = e.target;
+        const label = el.id || el.tagName;
+        debugLog(`focusin → ${label}`);
+    });
+    document.addEventListener('focusout', (e) => {
+        const el = e.target;
+        const label = el.id || el.tagName;
+        debugLog(`focusout ← ${label}`);
+    });
+
     const API_WAGLER = '/api/wagler';
     const API_CATALOG = '/api/questCatalog';
     const API_WEEKS = '/api/weeks';
@@ -286,6 +331,7 @@
             activeQuests = [...data].sort((a, b) => b.points - a.points);
             questsLoaded = true;
             searchInput.placeholder = '퀘스트명을 입력해주세요';
+            debugLog(`퀘스트 데이터 로드 완료 (${activeQuests.length}개)`);
 
             // 데이터가 늦게 도착했을 때, 이미 포커스돼있거나 드롭다운이 열려있는 상태라면
             // 빈 목록으로 남아있지 않도록 다시 그려줌
@@ -322,9 +368,13 @@
         const searchInput = document.getElementById('qQuestSearch');
         const dropdown = document.getElementById('qQuestDropdown');
 
-        searchInput.addEventListener('focus', () => renderQuestDropdown(searchInput.value));
+        searchInput.addEventListener('focus', () => {
+            debugLog('qQuestSearch: focus 이벤트 발생 → renderQuestDropdown 호출');
+            renderQuestDropdown(searchInput.value);
+        });
         searchInput.addEventListener('input', () => {
             selectedQuestId = ''; // 텍스트를 다시 고치면 선택은 무효화
+            debugLog(`qQuestSearch: input 이벤트 (value="${searchInput.value}")`);
             renderQuestDropdown(searchInput.value);
         });
 
@@ -335,9 +385,11 @@
             selectedQuestId = item.dataset.id;
             searchInput.value = `${item.dataset.name} (+${item.dataset.points}점)`;
             dropdown.classList.remove('open');
+            debugLog(`dropdown item 선택: ${item.dataset.name}`);
         });
 
         searchInput.addEventListener('blur', () => {
+            debugLog('qQuestSearch: blur 이벤트 발생 → 150ms 후 드롭다운 닫힘');
             setTimeout(() => dropdown.classList.remove('open'), 150);
         });
     }
