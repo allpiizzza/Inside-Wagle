@@ -367,8 +367,16 @@
     function setupQuestSearch() {
         const searchInput = document.getElementById('qQuestSearch');
         const dropdown = document.getElementById('qQuestDropdown');
+        let blurCloseTimer = null;
 
         searchInput.addEventListener('focus', () => {
+            // 이전 blur가 예약해둔 "닫기"가 아직 안 지나갔다면 취소
+            // (모바일에서 focus→blur→focus가 순식간에 연달아 발생하는 경우가 있어서,
+            //  이 취소 처리가 없으면 다시 열어놔도 예전 blur의 setTimeout이 뒤늦게 실행돼서 닫혀버림)
+            if (blurCloseTimer) {
+                clearTimeout(blurCloseTimer);
+                blurCloseTimer = null;
+            }
             debugLog('qQuestSearch: focus 이벤트 발생 → renderQuestDropdown 호출');
             renderQuestDropdown(searchInput.value);
         });
@@ -389,8 +397,11 @@
         });
 
         searchInput.addEventListener('blur', () => {
-            debugLog('qQuestSearch: blur 이벤트 발생 → 150ms 후 드롭다운 닫힘');
-            setTimeout(() => dropdown.classList.remove('open'), 150);
+            debugLog('qQuestSearch: blur 이벤트 발생 → 150ms 후 드롭다운 닫힘 (취소되지 않으면)');
+            blurCloseTimer = setTimeout(() => {
+                dropdown.classList.remove('open');
+                blurCloseTimer = null;
+            }, 150);
         });
     }
 
