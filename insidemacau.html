@@ -401,6 +401,7 @@
 
 <div class="card">
     <div class="ranking-title">🏆 걸어걸어 🏆</div>
+    <div style="font-size: 12px; color: #d63031; font-weight: 700; text-align: center; margin-bottom: 12px;">📌 뽑은 아이템은 본방에 공유하고 당일에 사용 필수!</div>
     <ul class="ranking-list" id="rankingList">
         <li>데이터를 불러오는 중...</li>
     </ul>
@@ -585,7 +586,7 @@
 
             setTimeout(() => {
                 let msgScore = isNaN(parseInt(data.score)) ? data.score : `${data.score}점`;
-                alert(`🎉 축하합니다! [${userName}]님, ${msgScore} 당첨!`);
+                alert(`🎉 축하합니다! [${userName}]님, ${msgScore} 당첨!\n\n📌 뽑은 아이템은 본방에 공유하고 당일에 사용 필수!`);
                 loadRankings();
                 isSpinning = false;
                 spinBtn.disabled = false;
