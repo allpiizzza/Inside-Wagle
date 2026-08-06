@@ -279,7 +279,7 @@
         return points >= 0 ? `+${points}점` : `${points}점`;
     }
 
-    // 점수 내림차순 → 이름순 정렬 (단, "이름 (월)", "이름 (화)" 같은 요일 표기는
+    // 퀘스트명(ㄱ~ㅎ) → 점수 내림차순 → 요일(월~일) 순 정렬. "이름 (월)", "이름 (화)" 같은 요일 표기는
     // 가나다순이 아니라 월화수목금토일 순서로 정렬되게 처리)
     const DAY_ORDER = ['월', '화', '수', '목', '금', '토', '일'];
 
@@ -292,10 +292,10 @@
     }
 
     function compareQuests(a, b) {
-        if (b.points !== a.points) return b.points - a.points;
         const ka = questSortKey(a.name);
         const kb = questSortKey(b.name);
         if (ka.base !== kb.base) return ka.base.localeCompare(kb.base, 'ko');
+        if (b.points !== a.points) return b.points - a.points;
         return ka.dayIndex - kb.dayIndex;
     }
 
