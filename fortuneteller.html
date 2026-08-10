@@ -468,7 +468,7 @@
 
         // 💡 약 10% 확률로 럭키 이용권 당첨 로직 (하루에 한 번 고정)
         const ticketChanceRandom = seededRandom(seed + "_ticketChance");
-        if (ticketChanceRandom < 0.10) {
+        if (ticketChanceRandom < 0.05) {
             const ticketPickRandom = seededRandom(seed + "_ticketPick");
             const ticketName = tickets[Math.floor(ticketPickRandom * tickets.length)];
             document.getElementById('ticketName').innerText = ticketName;
