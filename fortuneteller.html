@@ -363,19 +363,19 @@
         '최리': { team: '불끈이', values: ['성공', '안정', '여유', '풍요', '만족'] }
     };
 
-    // 🌟 희귀 티켓 (당첨분 중 1%p 배분 — 개별 약 0.33%)
-    const rareTickets = [
-        "📱 [빙봉에게 카톡하기] 획득!",
-        "🤝 [팀원 1명 모아가기] 획득!",
-        "📖 [직전 책 후기페이지 뽀려가기] 획득!"
-    ];
-
-    // 🎫 일반 티켓 (당첨분 중 4%p 배분 — 개별 1%)
-    const commonTickets = [
-        "🎁 [룰렛 1회 이용권] 획득!",
-        "🎫 [프리덤 연속 1회 채움권] 획득!",
-        "📘 [북큐 1회 채움권] 획득!",
-        "☔ [축축이면제권^^] 획득!"
+    // 🎟️ 티켓별 1인 1일 당첨 확률 (합계 약 4.57%)
+    //    ⚠️ 배열 순서 = 누적 확률 구간. seededRandom 이 0 근처에서 편향이 커서
+    //       확률이 작은 희귀 티켓일수록 뒤에 둬야 목표 빈도가 정확히 맞는다.
+    //       (빙봉을 맨 앞에 두면 목표보다 +16.6% 더 자주 나옴)
+    const MONTHLY = 29 * 30.44; // 멤버 29명 × 한 달 = 월간 총 뽑기 횟수
+    const ticketTable = [
+        { chance: 0.01,        name: "🎁 [룰렛 1회 이용권] 획득!" },            // 월 약 8.8회
+        { chance: 0.01,        name: "🎫 [프리덤 연속 1회 채움권] 획득!" },     // 월 약 8.8회
+        { chance: 0.01,        name: "📘 [북큐 1회 채움권] 획득!" },            // 월 약 8.8회
+        { chance: 0.01,        name: "☔ [축축이면제권^^] 획득!" },             // 월 약 8.8회
+        { chance: 2 / MONTHLY, name: "🤝 [팀원 1명 모아가기] 획득!" },          // 월 2회
+        { chance: 2 / MONTHLY, name: "📖 [직전 책 후기페이지 뽀려가기] 획득!" }, // 월 2회
+        { chance: 1 / MONTHLY, name: "📱 [빙봉에게 카톡하기] 획득!" }           // 월 1회 (이벤트팀 준비 필요)
     ];
 
     // 1. 운세 데이터 가져오기 (Notion DB → /api/fortune)
@@ -471,17 +471,13 @@
         quoteMsg.innerHTML = quoteText;
         itemMsg.innerHTML = itemText;
 
-        // 💡 약 5% 확률로 럭키 이용권 당첨 로직 (하루에 한 번 고정)
-        //    당첨분 중 희귀 티켓 1%p / 일반 티켓 4%p로 배분
-        const TICKET_CHANCE = 0.05;
-        const RARE_CHANCE = 0.01;
+        // 💡 티켓별 개별 확률로 럭키 이용권 당첨 판정 (하루에 한 번 고정, 합계 약 4.57%)
+        const ticketRoll = seededRandom(seed + "_ticketChance");
+        let acc = 0;
+        const wonTicket = ticketTable.find(t => ticketRoll < (acc += t.chance));
 
-        const ticketChanceRandom = seededRandom(seed + "_ticketChance");
-        if (ticketChanceRandom < TICKET_CHANCE) {
-            const pool = ticketChanceRandom < RARE_CHANCE ? rareTickets : commonTickets;
-            const ticketPickRandom = seededRandom(seed + "_ticketPick");
-            const ticketName = pool[Math.floor(ticketPickRandom * pool.length)];
-            document.getElementById('ticketName').innerText = ticketName;
+        if (wonTicket) {
+            document.getElementById('ticketName').innerText = wonTicket.name;
             ticketBox.style.display = 'block';
         } else {
             ticketBox.style.display = 'none';
