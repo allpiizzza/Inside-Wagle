@@ -1,7 +1,8 @@
 // api/teamScores.js
 // Vercel Serverless Function - 팀별 총점 집계 (전광판용)
 // 와글러 DB를 1회, 퀘스트 DB를 1회 스캔해서 팀별로 점수를 합산합니다.
-// 점수 정의는 wagler.js의 totalScore와 동일: (N월 포인트 숫자 합) + (주차 관계형이 가리키는 퀘스트 점수 합)
+// 점수 정의: (N월 포인트 숫자 합) + (주차 관계형이 가리키는 퀘스트 점수 합) + (N월 프리덤 숫자 합)
+// 응답에 팀/멤버별 breakdown(monthly/quests/freedom)을 함께 내려 검증을 돕습니다.
 // 롤업/집계 속성을 Notion에 따로 만들 필요 없이 여기서 계산합니다.
 
 const NOTION_VERSION = '2022-06-28';
@@ -67,18 +68,21 @@ async function resolveRelationTitles(headers, pages, propName) {
     return map;
 }
 
-// 한 사람의 총점 = (N월 포인트 숫자 합) + (주차 관계형이 가리키는 퀘스트 점수 합)
-function computePersonTotal(page, questPointsMap) {
-    let total = 0;
+// 한 사람의 점수 구성: N월 포인트 + 주차 퀘스트 점수 + N월 프리덤
+function computePersonScore(page, questPointsMap) {
+    let monthly = 0;  // "N월 포인트" 숫자 합
+    let quests = 0;   // "N월 M주차" 관계형이 가리키는 퀘스트 점수 합
+    let freedom = 0;  // "N월 프리덤" 숫자 합
     for (const [propName, prop] of Object.entries(page.properties)) {
         if (prop.type === 'number' && /\d+월\s*포인트/.test(propName)) {
-            total += prop.number ?? 0;
-        }
-        if (prop.type === 'relation' && propName.includes('주차')) {
-            total += prop.relation.reduce((sum, r) => sum + (questPointsMap[r.id] || 0), 0);
+            monthly += prop.number ?? 0;
+        } else if (prop.type === 'number' && /\d+월\s*프리덤/.test(propName)) {
+            freedom += prop.number ?? 0;
+        } else if (prop.type === 'relation' && propName.includes('주차')) {
+            quests += prop.relation.reduce((sum, r) => sum + (questPointsMap[r.id] || 0), 0);
         }
     }
-    return total;
+    return { monthly, quests, freedom, total: monthly + quests + freedom };
 }
 
 export default async function handler(req, res) {
@@ -131,16 +135,21 @@ export default async function handler(req, res) {
         ]);
 
         // 3) 팀별로 묶어 합산
-        const teamMap = {}; // teamName -> { team, total, members: [{name, score}] }
+        const teamMap = {}; // teamName -> { team, total, breakdown, members: [...] }
         for (const page of pages) {
             const team = extractTeamName(page.properties['팀'], teamNameMap);
             if (!team) continue; // 팀 미배정은 전광판에서 제외
             const name = page.properties['와글러']?.title?.[0]?.plain_text || '이름없음';
-            const score = computePersonTotal(page, questPointsMap);
+            const s = computePersonScore(page, questPointsMap);
 
-            if (!teamMap[team]) teamMap[team] = { team, total: 0, members: [] };
-            teamMap[team].total += score;
-            teamMap[team].members.push({ name, score });
+            if (!teamMap[team]) {
+                teamMap[team] = { team, total: 0, breakdown: { monthly: 0, quests: 0, freedom: 0 }, members: [] };
+            }
+            teamMap[team].total += s.total;
+            teamMap[team].breakdown.monthly += s.monthly;
+            teamMap[team].breakdown.quests += s.quests;
+            teamMap[team].breakdown.freedom += s.freedom;
+            teamMap[team].members.push({ name, score: s.total, ...s });
         }
 
         const teams = Object.values(teamMap)
