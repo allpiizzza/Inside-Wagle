@@ -160,6 +160,36 @@ export default async function handler(req, res) {
             }))
             .sort((a, b) => b.total - a.total); // 총점 내림차순
 
+        // 디버그: ?debug=1 → 와글러 DB의 모든 숫자/롤업/수식 컬럼을 팀별로 합산 + 스키마 덤프
+        // 어느 컬럼에 점수가 숨어있는지 한눈에 보려고 임시로 둠
+        if (req.query.debug) {
+            const NUMERICISH = new Set(['number', 'rollup', 'formula']);
+            const numVal = (prop) => {
+                if (!prop) return null;
+                if (prop.type === 'number') return prop.number;
+                if (prop.type === 'rollup') return prop.rollup?.number ?? null;
+                if (prop.type === 'formula') return prop.formula?.number ?? null;
+                return null;
+            };
+            const schema = Object.entries(pages[0]?.properties || {})
+                .map(([name, p]) => `${name} : ${p.type}`)
+                .sort();
+            const colsByTeam = {};
+            for (const page of pages) {
+                const team = extractTeamName(page.properties['팀'], teamNameMap);
+                if (!team) continue;
+                colsByTeam[team] = colsByTeam[team] || {};
+                for (const [propName, prop] of Object.entries(page.properties)) {
+                    if (!NUMERICISH.has(prop.type)) continue;
+                    const v = numVal(prop);
+                    if (typeof v === 'number') {
+                        colsByTeam[team][propName] = (colsByTeam[team][propName] || 0) + v;
+                    }
+                }
+            }
+            return res.status(200).json({ schema, colsByTeam, teams });
+        }
+
         return res.status(200).json(teams);
     } catch (err) {
         return res.status(500).json({ error: err.message });
