@@ -1,9 +1,10 @@
 // api/teamScores.js
 // Vercel Serverless Function - 팀별 총점 집계 (전광판용)
-// 와글러 DB를 1회, 퀘스트 DB를 1회 스캔해서 팀별로 점수를 합산합니다.
-// 점수 정의: (N월 포인트 숫자 합) + (주차 관계형이 가리키는 퀘스트 점수 합) + (N월 프리덤 숫자 합)
-// 응답에 팀/멤버별 breakdown(monthly/quests/freedom)을 함께 내려 검증을 돕습니다.
-// 롤업/집계 속성을 Notion에 따로 만들 필요 없이 여기서 계산합니다.
+//
+// 와글러 DB의 '전체포인트'(formula) 컬럼이 각 와글러의 최종 총점입니다.
+// (월포인트 + 주차 퀘스트 점수 + 프리덤 + 책구슬 포인트가 모두 이 formula에 이미 반영돼 있어요.)
+// 그래서 요소를 재계산하지 않고 '전체포인트'를 그대로 읽어 팀별로 합산합니다 → Notion 값과 항상 일치.
+// 와글러 DB 1회 스캔만 필요하고, 퀘스트 DB 조회는 더 이상 필요 없습니다.
 
 const NOTION_VERSION = '2022-06-28';
 const ALLOWED_ORIGIN = '*';
@@ -12,26 +13,6 @@ function setCors(res) {
     res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
     res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
     res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-}
-
-// 퀘스트 DB를 훑어 { pageId: 점수 } 맵을 만듦
-async function fetchQuestPointsMap(headers, questDbId) {
-    const map = {};
-    let cursor = undefined;
-    do {
-        const response = await fetch(`https://api.notion.com/v1/databases/${questDbId}/query`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ page_size: 100, start_cursor: cursor }),
-        });
-        const data = await response.json();
-        if (!response.ok) throw new Error(data.message || '퀘스트 DB 조회 실패');
-        data.results.forEach((page) => {
-            map[page.id] = page.properties['점수']?.number ?? 0;
-        });
-        cursor = data.has_more ? data.next_cursor : undefined;
-    } while (cursor);
-    return map;
 }
 
 function extractTeamName(prop, teamNameMap) {
@@ -45,7 +26,7 @@ function extractTeamName(prop, teamNameMap) {
     return null;
 }
 
-// '팀'이 관계형일 때만 추가 조회가 일어남 (Select/Status면 호출 0회 → 더 효율적)
+// '팀'이 관계형일 때만 추가 조회가 일어남 (Select/Status면 호출 0회)
 async function resolveRelationTitles(headers, pages, propName) {
     const idsNeeded = new Set();
     pages.forEach((page) => {
@@ -68,21 +49,14 @@ async function resolveRelationTitles(headers, pages, propName) {
     return map;
 }
 
-// 한 사람의 점수 구성: N월 포인트 + 주차 퀘스트 점수 + N월 프리덤
-function computePersonScore(page, questPointsMap) {
-    let monthly = 0;  // "N월 포인트" 숫자 합
-    let quests = 0;   // "N월 M주차" 관계형이 가리키는 퀘스트 점수 합
-    let freedom = 0;  // "N월 프리덤" 숫자 합
-    for (const [propName, prop] of Object.entries(page.properties)) {
-        if (prop.type === 'number' && /\d+월\s*포인트/.test(propName)) {
-            monthly += prop.number ?? 0;
-        } else if (prop.type === 'number' && /\d+월\s*프리덤/.test(propName)) {
-            freedom += prop.number ?? 0;
-        } else if (prop.type === 'relation' && propName.includes('주차')) {
-            quests += prop.relation.reduce((sum, r) => sum + (questPointsMap[r.id] || 0), 0);
-        }
-    }
-    return { monthly, quests, freedom, total: monthly + quests + freedom };
+// 와글러 1명의 총점 = '전체포인트' 값 (formula/rollup/number 어느 형태든 숫자로 추출)
+function extractTotalPoint(page) {
+    const prop = page.properties['전체포인트'];
+    if (!prop) return 0;
+    if (prop.type === 'formula') return prop.formula?.number ?? 0;
+    if (prop.type === 'rollup') return prop.rollup?.number ?? 0;
+    if (prop.type === 'number') return prop.number ?? 0;
+    return 0;
 }
 
 export default async function handler(req, res) {
@@ -93,15 +67,14 @@ export default async function handler(req, res) {
         return res.status(405).json({ error: `허용되지 않는 메서드: ${req.method}` });
     }
 
-    // 전광판은 실시간성이 크게 중요하지 않으니 30초 캐시 + 그 이후 59초는 예전 응답 보여주며 갱신
-    res.setHeader('Cache-Control', 's-maxage=30, stale-while-revalidate=59');
+    // 전광판은 실시간성이 크게 중요하지 않으니 60초 캐시 + 그 이후 59초는 예전 응답 보여주며 갱신
+    res.setHeader('Cache-Control', 's-maxage=60, stale-while-revalidate=59');
 
     const NOTION_TOKEN = process.env.NOTION_TOKEN;
     const WAGLER_DB_ID = process.env.NOTION_WAGLER_DB_ID;
-    const QUEST_DB_ID = process.env.NOTION_QUEST_DB_ID;
 
-    if (!NOTION_TOKEN || !WAGLER_DB_ID || !QUEST_DB_ID) {
-        return res.status(500).json({ error: '서버에 NOTION_TOKEN / NOTION_WAGLER_DB_ID / NOTION_QUEST_DB_ID 환경변수가 설정되지 않았어요.' });
+    if (!NOTION_TOKEN || !WAGLER_DB_ID) {
+        return res.status(500).json({ error: '서버에 NOTION_TOKEN / NOTION_WAGLER_DB_ID 환경변수가 설정되지 않았어요.' });
     }
 
     const headers = {
@@ -128,67 +101,30 @@ export default async function handler(req, res) {
             cursor = data.has_more ? data.next_cursor : undefined;
         } while (cursor);
 
-        // 2) 퀘스트 점수 맵 + 팀 이름 맵(관계형일 때만 추가 호출)을 병렬로 준비
-        const [questPointsMap, teamNameMap] = await Promise.all([
-            fetchQuestPointsMap(headers, QUEST_DB_ID),
-            resolveRelationTitles(headers, pages, '팀'),
-        ]);
+        // 2) 팀 이름 맵 (팀이 관계형일 때만 추가 호출)
+        const teamNameMap = await resolveRelationTitles(headers, pages, '팀');
 
-        // 3) 팀별로 묶어 합산
-        const teamMap = {}; // teamName -> { team, total, breakdown, members: [...] }
+        // 3) 팀별로 '전체포인트' 합산
+        const teamMap = {}; // teamName -> { team, total, members: [{name, score}] }
         for (const page of pages) {
             const team = extractTeamName(page.properties['팀'], teamNameMap);
             if (!team) continue; // 팀 미배정은 전광판에서 제외
             const name = page.properties['와글러']?.title?.[0]?.plain_text || '이름없음';
-            const s = computePersonScore(page, questPointsMap);
+            const score = extractTotalPoint(page);
 
-            if (!teamMap[team]) {
-                teamMap[team] = { team, total: 0, breakdown: { monthly: 0, quests: 0, freedom: 0 }, members: [] };
-            }
-            teamMap[team].total += s.total;
-            teamMap[team].breakdown.monthly += s.monthly;
-            teamMap[team].breakdown.quests += s.quests;
-            teamMap[team].breakdown.freedom += s.freedom;
-            teamMap[team].members.push({ name, score: s.total, ...s });
+            if (!teamMap[team]) teamMap[team] = { team, total: 0, members: [] };
+            teamMap[team].total += score;
+            teamMap[team].members.push({ name, score });
         }
 
         const teams = Object.values(teamMap)
             .map((t) => ({
-                ...t,
+                team: t.team,
+                total: Math.round(t.total), // 정수로 반올림
                 memberCount: t.members.length,
                 members: t.members.sort((a, b) => b.score - a.score),
             }))
             .sort((a, b) => b.total - a.total); // 총점 내림차순
-
-        // 디버그: ?debug=1 → 와글러 DB의 모든 숫자/롤업/수식 컬럼을 팀별로 합산 + 스키마 덤프
-        // 어느 컬럼에 점수가 숨어있는지 한눈에 보려고 임시로 둠
-        if (req.query.debug) {
-            const NUMERICISH = new Set(['number', 'rollup', 'formula']);
-            const numVal = (prop) => {
-                if (!prop) return null;
-                if (prop.type === 'number') return prop.number;
-                if (prop.type === 'rollup') return prop.rollup?.number ?? null;
-                if (prop.type === 'formula') return prop.formula?.number ?? null;
-                return null;
-            };
-            const schema = Object.entries(pages[0]?.properties || {})
-                .map(([name, p]) => `${name} : ${p.type}`)
-                .sort();
-            const colsByTeam = {};
-            for (const page of pages) {
-                const team = extractTeamName(page.properties['팀'], teamNameMap);
-                if (!team) continue;
-                colsByTeam[team] = colsByTeam[team] || {};
-                for (const [propName, prop] of Object.entries(page.properties)) {
-                    if (!NUMERICISH.has(prop.type)) continue;
-                    const v = numVal(prop);
-                    if (typeof v === 'number') {
-                        colsByTeam[team][propName] = (colsByTeam[team][propName] || 0) + v;
-                    }
-                }
-            }
-            return res.status(200).json({ schema, colsByTeam, teams });
-        }
 
         return res.status(200).json(teams);
     } catch (err) {
