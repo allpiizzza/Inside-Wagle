@@ -93,6 +93,49 @@
         .btn-freedom  { background: linear-gradient(135deg, #6ba6e8, #4a90e2); color: #fff; box-shadow: 0 6px 16px rgba(74, 144, 226, 0.35); }
         .btn-fortune  { background: linear-gradient(135deg, #7bc97b, #5cb85c); color: #fff; box-shadow: 0 6px 16px rgba(92, 184, 92, 0.35); }
         .btn-macau    { background: linear-gradient(135deg, #ea7b83, #e15b64); color: #fff; box-shadow: 0 6px 16px rgba(225, 91, 100, 0.35); }
+
+        /* 팀 점수 전광판 (막대그래프) */
+        .scoreboard {
+            margin: 6px 0 22px;
+            padding: 14px 14px 16px;
+            background: rgba(118, 92, 231, 0.06);
+            border: 1px solid #ece6fb;
+            border-radius: 16px;
+            text-align: left;
+        }
+        .board { display: flex; flex-direction: column; gap: 9px; }
+        .bar-row { display: flex; align-items: center; gap: 8px; }
+        .bar-row .tname {
+            width: 42px;
+            font-size: 12px;
+            font-weight: 700;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+        .bar-track {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.85);
+            border-radius: 7px;
+            height: 18px;
+            overflow: hidden;
+        }
+        .bar-fill {
+            height: 100%;
+            width: 0;
+            border-radius: 7px;
+            transition: width 1.1s cubic-bezier(.22,1,.36,1);
+        }
+        .bar-row .tscore {
+            width: 40px;
+            text-align: right;
+            font-size: 12px;
+            font-weight: 800;
+            color: #37352f;
+            font-variant-numeric: tabular-nums;
+            flex-shrink: 0;
+        }
+        .board-msg { font-size: 12px; color: #9b8fc7; text-align: center; padding: 8px 0; }
+        .board-msg.error { color: #c0392b; }
     </style>
 </head>
 <body>
@@ -121,12 +164,72 @@
         <div class="landing-emoji">🔮</div>
         <h1>인사이드 와글</h1>
         <div class="subtitle">2026 하반기 이벤트<br>와글과 함께 기억구슬 모으기</div>
+
+        <div class="scoreboard">
+            <div class="board" id="board"><div class="board-msg">점수 불러오는 중…</div></div>
+        </div>
+
         <a class="btn-register btn-review" href="registerMarble.html">📖 기억구슬 자판기</a>
         <a class="btn-register btn-quest" href="quests.html">🎯 퀘스트 클리어</a>
         <a class="btn-register btn-freedom" href="freedom.html">⏰ 프리덤 타임</a>
         <a class="btn-register btn-fortune" href="fortuneteller.html">🥠 와글의 운세</a>
         <a class="btn-register btn-macau" href="insidemacau.html">🎰 와글노름꾼</a>
     </div>
+
+    <script>
+        const API_TEAM_SCORES = '/api/teamScores';
+        const TEAM_COLORS = {
+            '생글이': '#f5c33b', // 노랑
+            '당당이': '#8fce5a', // 연두
+            '불끈이': '#e86a6a', // 빨강
+            '포근이': '#5aa0e6', // 파랑/하늘
+            '중심이': '#9b7ff0', // 보라
+        };
+        function colorFor(name) {
+            const k = Object.keys(TEAM_COLORS).find((k) => name.includes(k));
+            return k ? TEAM_COLORS[k] : '#6c5ce7';
+        }
+        function renderBoard(teams) {
+            const board = document.getElementById('board');
+            if (!Array.isArray(teams) || teams.length === 0) {
+                board.innerHTML = '<div class="board-msg">아직 집계된 점수가 없어요.</div>';
+                return;
+            }
+            const max = Math.max(...teams.map((t) => t.total), 1);
+            board.innerHTML = '';
+            teams.forEach((t) => {
+                const color = colorFor(t.team);
+                const label = t.team.replace(/팀$/, ''); // "생글이팀" → "생글이"
+                const row = document.createElement('div');
+                row.className = 'bar-row';
+                row.innerHTML = `
+                    <div class="tname" style="color:${color}">${label}</div>
+                    <div class="bar-track"><div class="bar-fill" style="background:${color}"></div></div>
+                    <div class="tscore">${t.total.toLocaleString()}</div>`;
+                board.appendChild(row);
+                requestAnimationFrame(() => {
+                    row.querySelector('.bar-fill').style.width = ((t.total / max) * 100) + '%';
+                });
+            });
+        }
+        async function loadBoard() {
+            try {
+                const res = await fetch(API_TEAM_SCORES);
+                const ct = res.headers.get('content-type') || '';
+                if (!ct.includes('application/json')) {
+                    throw new Error('전광판 API(/api/teamScores) 응답이 JSON이 아니에요. 배포/구동 상태를 확인해주세요.');
+                }
+                const data = await res.json();
+                if (!res.ok) throw new Error(data.error || '불러오기 실패');
+                renderBoard(data);
+            } catch (err) {
+                document.getElementById('board').innerHTML =
+                    `<div class="board-msg error">${err.message}</div>`;
+            }
+        }
+        loadBoard();
+        setInterval(loadBoard, 600000); // 10분마다 새로고침
+    </script>
 
 </body>
 </html>
