@@ -1,0 +1,17 @@
+# JetBrains IDE - 개인 작업 상태 (공유 불필요)
+.idea/workspace.xml
+.idea/claudeCodeEditorTabs.xml
+.idea/shelf/
+
+# 로컬 환경변수
+.env
+.env*.local
+
+# Vercel
+.vercel
+
+# 의존성
+node_modules/
+
+# OS
+.DS_Store
