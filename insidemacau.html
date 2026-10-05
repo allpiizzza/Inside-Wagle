@@ -393,8 +393,8 @@
 
     <div id="loading">결과를 불러오는 중...🚀</div>
     <button class="btn-spin" id="spinBtn" onclick="spin()">
-        돌리기!
-        <span class="btn-hint">룰렛 티켓 있는 사람만 돌려</span>
+        <span id="spinBtnLabel">돌리기!</span>
+        <span class="btn-hint" id="spinBtnHint">룰렛 티켓 있는 사람만 돌려</span>
     </button>
     <div class="trust-footer">✅ 100% 안전 인증 · 먹튀 걱정 NO · 전액 감정구슬 지급 보장</div>
 </div>
@@ -426,7 +426,10 @@
 
     userNameInput.addEventListener('change', (e) => {
         localStorage.setItem('rouletteUserName', e.target.value);
+        resetBonus(); // 사람이 바뀌면 남은 보너스 스핀은 무효
     });
+
+    playDateInput.addEventListener('change', () => resetBonus()); // 날짜가 바뀌어도 무효
 
     const slices = [
         { name: "💎 300", weight: 4, color1: "#ff0844", color2: "#ffb199" },
@@ -447,6 +450,23 @@
     const totalWeight = slices.reduce((sum, slice) => sum + slice.weight, 0);
     let currentRotation = 0;
     let isSpinning = false;
+
+    // 🎁 "하닉오르면한번더~!" 가 나오면 보너스 스핀 1회를 더 준다.
+    //    보너스 스핀은 이름 키에 (한번더) 태그를 붙여 서버로 보낸다.
+    //    서버(GAS)가 '같은 이름 재참여'를 막더라도 걸리지 않고,
+    //    랭킹에도 보너스로 딴 점수라는 게 그대로 드러난다.
+    const RESPIN_SLICE = "하닉오르면한번더~!";
+    const MAX_BONUS_CHAIN = 5; // 보너스가 연달아 터져도 무한 반복은 막는다
+    let bonusRound = 0;        // 0 = 평소 스핀, 1 이상 = 보너스 n회차
+
+    function setSpinButton(label, hint) {
+        document.getElementById('spinBtnLabel').innerText = label;
+        document.getElementById('spinBtnHint').innerText = hint;
+    }
+    function resetBonus() {
+        bonusRound = 0;
+        setSpinButton('돌리기!', '룰렛 티켓 있는 사람만 돌려');
+    }
 
     function drawWheel() {
         const centerX = canvas.width / 2;
@@ -546,7 +566,9 @@
         }
 
         const [, mm, dd] = dateValue.split('-');
-        const userName = `${mm}${dd} ${rawName}`; // 예: "0801 홍길동"
+        // 보너스 스핀이면 이름 뒤에 (한번더) / (한번더2) ... 를 붙여 별도 참가자로 기록
+        const bonusTag = bonusRound > 0 ? ` (한번더${bonusRound > 1 ? bonusRound : ''})` : '';
+        const userName = `${mm}${dd} ${rawName}${bonusTag}`; // 예: "0801 홍길동", "0801 홍길동 (한번더)"
 
         if (isSpinning) return;
         isSpinning = true;
@@ -586,16 +608,30 @@
 
             setTimeout(() => {
                 let msgScore = isNaN(parseInt(data.score)) ? data.score : `${data.score}점`;
-                
+
                 // 💡 수정된 부분: 숫자가 아니면 빈칸('')을 출력하도록 변경하고 줄바꿈(\n\n)을 추가했습니다.
                 let msgnotion = isNaN(parseInt(data.score)) ? '' : `\n\n룰렛 대상자가 맞다면 노션태그: 노름꾼 ${data.score}점으로 등록‼️`;
-                
-                const isItemWin = !!slices[winningIndex].lines; //[cite: 1]
+
+                // 🎁 한번더는 '쓰는 아이템'이 아니라 다시 돌릴 권리라서 아이템 안내에서 제외
+                const isRespin = slices[winningIndex].name === RESPIN_SLICE;
+                const isItemWin = !!slices[winningIndex].lines && !isRespin; //[cite: 1]
                 const noticeText = isItemWin ? '\n\n📌 뽑은 아이템은 본방에 공유하고 즉시 사용 필수!' : ''; //[cite: 1]
-                
+
+                let respinText = '';
+                if (isRespin && bonusRound < MAX_BONUS_CHAIN) {
+                    bonusRound++;
+                    respinText = `\n\n🎁 하닉이 올려줬다!! [한번 더 돌리기] 버튼으로 ${bonusRound}회차 보너스를 돌려주세요!`;
+                    setSpinButton('한번 더 돌리기! 🎁', `보너스 ${bonusRound}회차 · 하닉이 올려줬어요`);
+                } else if (isRespin) {
+                    respinText = `\n\n🎁 보너스는 ${MAX_BONUS_CHAIN}회까지만 가능해요. 여기서 마무리!`;
+                    resetBonus();
+                } else {
+                    resetBonus();
+                }
+
                 // 알림창 띄우기
-                alert(`🎉 축하합니다! [${userName}]님, ${msgScore} 당첨!${noticeText}${msgnotion}`);
-                
+                alert(`🎉 축하합니다! [${userName}]님, ${msgScore} 당첨!${noticeText}${respinText}${msgnotion}`);
+
                 loadRankings(); //[cite: 1]
                 isSpinning = false; //[cite: 1]
                 spinBtn.disabled = false; //[cite: 1]
