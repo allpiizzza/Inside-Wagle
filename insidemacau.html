@@ -393,8 +393,8 @@
 
     <div id="loading">결과를 불러오는 중...🚀</div>
     <button class="btn-spin" id="spinBtn" onclick="spin()">
-        <span id="spinBtnLabel">돌리기!</span>
-        <span class="btn-hint" id="spinBtnHint">룰렛 티켓 있는 사람만 돌려</span>
+        돌리기!
+        <span class="btn-hint">룰렛 티켓 있는 사람만 돌려</span>
     </button>
     <div class="trust-footer">✅ 100% 안전 인증 · 먹튀 걱정 NO · 전액 감정구슬 지급 보장</div>
 </div>
@@ -426,10 +426,7 @@
 
     userNameInput.addEventListener('change', (e) => {
         localStorage.setItem('rouletteUserName', e.target.value);
-        resetBonus(); // 사람이 바뀌면 남은 보너스 스핀은 무효
     });
-
-    playDateInput.addEventListener('change', () => resetBonus()); // 날짜가 바뀌어도 무효
 
     const slices = [
         { name: "💎 300", weight: 4, color1: "#ff0844", color2: "#ffb199" },
@@ -450,22 +447,57 @@
     const totalWeight = slices.reduce((sum, slice) => sum + slice.weight, 0);
     let currentRotation = 0;
     let isSpinning = false;
+    let cachedRankings = []; // loadRankings 가 받아둔 기록 원본 (보너스 판정에 사용)
 
-    // 🎁 "하닉오르면한번더~!" 가 나오면 보너스 스핀 1회를 더 준다.
-    //    보너스 스핀은 이름 키에 (한번더) 태그를 붙여 서버로 보낸다.
-    //    서버(GAS)가 '같은 이름 재참여'를 막더라도 걸리지 않고,
-    //    랭킹에도 보너스로 딴 점수라는 게 그대로 드러난다.
+    /* ───────────────────────────────────────────────────────────────
+       🎁 "하닉오르면한번더~!" 보너스 스핀
+
+       같은 날 이 조각이 나왔던 사람은 한 번 더 돌릴 수 있어야 한다.
+       그런데 서버(GAS)는 같은 이름의 재참여를 "이미 참여했습니다"로
+       막는다. 서버는 이 저장소 밖(Apps Script)이라 고칠 수 없으므로,
+       보너스 스핀만 이름 뒤에 (한번더) 태그를 붙여 보내 차단을 피한다.
+
+         평소      → "1005 수리"
+         보너스1회 → "1005 수리 (한번더)"
+         보너스2회 → "1005 수리 (한번더2)"
+
+       남은 보너스 횟수는 랭킹 기록에서 직접 센다.
+         딴 횟수 = 하닉이 걸린 기록 수
+         쓴 횟수 = (한번더) 태그가 붙은 기록 수
+       서버 기록이 기준이라 폰·PC를 바꿔도, 새로고침을 해도 유지된다.
+       랭킹이 상위 일부만 내려오는 경우를 대비해, 이 브라우저에서 딴
+       기록은 localStorage 에도 남겨 더 큰 쪽을 '딴 횟수'로 쓴다.
+       ─────────────────────────────────────────────────────────────── */
     const RESPIN_SLICE = "하닉오르면한번더~!";
-    const MAX_BONUS_CHAIN = 5; // 보너스가 연달아 터져도 무한 반복은 막는다
-    let bonusRound = 0;        // 0 = 평소 스핀, 1 이상 = 보너스 n회차
+    const BONUS_TAG = "한번더";
+    const MAX_BONUS = 5; // 기록이 꼬여도 무한 재시도는 막는다
 
-    function setSpinButton(label, hint) {
-        document.getElementById('spinBtnLabel').innerText = label;
-        document.getElementById('spinBtnHint').innerText = hint;
+    const bonusKey = (base, n) => `${base} (${BONUS_TAG}${n > 1 ? n : ''})`;
+    const isBonusEntry = (name, base) => String(name || '').startsWith(`${base} (${BONUS_TAG}`);
+    const isRespinScore = (scoreText) => String(scoreText || '').includes('하닉');
+
+    const localWonKey = (base) => `respinWon:${base}`;
+    function recordLocalWin(base) {
+        try {
+            const n = parseInt(localStorage.getItem(localWonKey(base))) || 0;
+            localStorage.setItem(localWonKey(base), String(n + 1));
+        } catch (e) { /* 시크릿 모드 등에서 저장 실패해도 서버 기록으로 동작 */ }
     }
-    function resetBonus() {
-        bonusRound = 0;
-        setSpinButton('돌리기!', '룰렛 티켓 있는 사람만 돌려');
+    function localWonCount(base) {
+        try { return parseInt(localStorage.getItem(localWonKey(base))) || 0; } catch (e) { return 0; }
+    }
+
+    // 같은 날 딴 보너스 중 아직 안 쓴 횟수
+    function countRespinCredits(base) {
+        const mine = cachedRankings.filter(r => r.name === base || isBonusEntry(r.name, base));
+        const wonOnServer = mine.filter(r => isRespinScore(r.scoreText)).length;
+        const used = mine.filter(r => isBonusEntry(r.name, base)).length;
+        return Math.min(Math.max(wonOnServer, localWonCount(base)), MAX_BONUS) - used;
+    }
+
+    function requestSpin(nameKey) {
+        return fetch(`${GAS_URL}?action=spin&name=${encodeURIComponent(nameKey)}`, { cache: 'no-store' })
+            .then(res => res.json());
     }
 
     function drawWheel() {
@@ -527,6 +559,7 @@
         try {
             const response = await fetch(`${GAS_URL}?action=getRank&t=${Date.now()}`, { cache: 'no-store' });
             const rankings = await response.json();
+            cachedRankings = Array.isArray(rankings) ? rankings : [];
 
             const list = document.getElementById('rankingList');
             list.innerHTML = '';
@@ -566,9 +599,8 @@
         }
 
         const [, mm, dd] = dateValue.split('-');
-        // 보너스 스핀이면 이름 뒤에 (한번더) / (한번더2) ... 를 붙여 별도 참가자로 기록
-        const bonusTag = bonusRound > 0 ? ` (한번더${bonusRound > 1 ? bonusRound : ''})` : '';
-        const userName = `${mm}${dd} ${rawName}${bonusTag}`; // 예: "0801 홍길동", "0801 홍길동 (한번더)"
+        const baseName = `${mm}${dd} ${rawName}`; // 예: "0801 홍길동"
+        let userName = baseName;
 
         if (isSpinning) return;
         isSpinning = true;
@@ -580,8 +612,19 @@
         loading.style.display = 'block';
 
         try {
-            const response = await fetch(`${GAS_URL}?action=spin&name=${encodeURIComponent(userName)}`, { cache: 'no-store' });
-            const data = await response.json();
+            let data = await requestSpin(userName);
+
+            // 🎁 "이미 참여했습니다" 회피:
+            //    같은 날 하닉으로 딴 보너스가 남아 있으면 (한번더) 키로 다시 요청한다.
+            if (!data.success) {
+                await loadRankings(); // 최신 기록으로 갱신한 뒤 판정
+                const credits = countRespinCredits(baseName);
+                if (credits > 0) {
+                    const used = cachedRankings.filter(r => isBonusEntry(r.name, baseName)).length;
+                    userName = bonusKey(baseName, used + 1);
+                    data = await requestSpin(userName);
+                }
+            }
 
             loading.style.display = 'none';
 
@@ -608,30 +651,24 @@
 
             setTimeout(() => {
                 let msgScore = isNaN(parseInt(data.score)) ? data.score : `${data.score}점`;
-
+                
                 // 💡 수정된 부분: 숫자가 아니면 빈칸('')을 출력하도록 변경하고 줄바꿈(\n\n)을 추가했습니다.
                 let msgnotion = isNaN(parseInt(data.score)) ? '' : `\n\n룰렛 대상자가 맞다면 노션태그: 노름꾼 ${data.score}점으로 등록‼️`;
-
+                
                 // 🎁 한번더는 '쓰는 아이템'이 아니라 다시 돌릴 권리라서 아이템 안내에서 제외
                 const isRespin = slices[winningIndex].name === RESPIN_SLICE;
                 const isItemWin = !!slices[winningIndex].lines && !isRespin; //[cite: 1]
                 const noticeText = isItemWin ? '\n\n📌 뽑은 아이템은 본방에 공유하고 즉시 사용 필수!' : ''; //[cite: 1]
 
                 let respinText = '';
-                if (isRespin && bonusRound < MAX_BONUS_CHAIN) {
-                    bonusRound++;
-                    respinText = `\n\n🎁 하닉이 올려줬다!! [한번 더 돌리기] 버튼으로 ${bonusRound}회차 보너스를 돌려주세요!`;
-                    setSpinButton('한번 더 돌리기! 🎁', `보너스 ${bonusRound}회차 · 하닉이 올려줬어요`);
-                } else if (isRespin) {
-                    respinText = `\n\n🎁 보너스는 ${MAX_BONUS_CHAIN}회까지만 가능해요. 여기서 마무리!`;
-                    resetBonus();
-                } else {
-                    resetBonus();
+                if (isRespin) {
+                    recordLocalWin(baseName);
+                    respinText = '\n\n🎁 하닉이 올려줬다!! 오늘 한 번 더 돌릴 수 있어요.\n[돌리기!] 를 다시 누르면 됩니다.';
                 }
 
                 // 알림창 띄우기
                 alert(`🎉 축하합니다! [${userName}]님, ${msgScore} 당첨!${noticeText}${respinText}${msgnotion}`);
-
+                
                 loadRankings(); //[cite: 1]
                 isSpinning = false; //[cite: 1]
                 spinBtn.disabled = false; //[cite: 1]
