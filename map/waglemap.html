@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>와글 지도 — 노선도 & 거주역</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="subwaySchematic.js"></script><!-- window.SUBWAY_SCHEMATIC = { w, h, stations:{역명:[x,y]} } -->
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #37352f;
+            padding: 15px;
+            min-height: 100vh;
+            min-height: 100dvh;
+            background: radial-gradient(ellipse at 20% 10%, #fff6e0 0%, #fdfbf7 40%, #f3f0ff 100%);
+            background-attachment: fixed;
+        }
+
+        .app {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 920px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.82);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 2px solid #ffffff;
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(108, 92, 231, 0.12);
+            padding: 22px;
+        }
+
+        .back-link { font-size: 12px; color: #9b8fc7; text-decoration: none; display: inline-block; margin-bottom: 8px; font-weight: 600; }
+        .back-link:hover { color: #6c5ce7; }
+
+        .topbar { margin-bottom: 16px; }
+        .topbar h1 {
+            margin: 0 0 4px 0; font-size: 20px; font-weight: 800; letter-spacing: -0.3px;
+            background: linear-gradient(to right, #6c5ce7, #4a90e2);
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .topbar p { margin: 0; font-size: 12.5px; color: #9b8fc7; font-weight: 600; line-height: 1.5; }
+
+        .card { background: rgba(118, 92, 231, 0.06); border: 1px solid #ece6fb; border-radius: 16px; padding: 14px; }
+        .card h2 { margin: 0 0 10px; font-size: 14px; color: #4a3f8a; }
+        .card h2 .muted { font-weight: 400; }
+
+        input, button, select { font-size: 14px; font-family: inherit; }
+        input, select { padding: 9px 11px; border: 1.5px solid #e4def7; border-radius: 10px; background: #fff; color: #37352f; }
+        input:focus, select:focus { outline: none; border-color: #a370f7; }
+        button {
+            padding: 10px 16px; border: 0; border-radius: 12px; font-weight: 700; cursor: pointer;
+            background: linear-gradient(135deg, #a370f7, #6c5ce7); color: #fff;
+            box-shadow: 0 6px 14px rgba(108, 92, 231, 0.28); transition: transform .15s ease;
+        }
+        button:active { transform: scale(0.97); }
+        button.sm { padding: 4px 10px; font-size: 12px; border-radius: 8px; background: #cfc7ea; color: #4a3f8a; box-shadow: none; }
+        button:disabled { background: #d6d2e6; color: #fff; box-shadow: none; cursor: default; }
+
+        .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-start; }
+        #rsPerson { flex: 0 1 130px; }
+        #rsLabel  { flex: 0 1 130px; }
+        .searchbox { position: relative; flex: 1 1 180px; }
+        .searchbox input { width: 100%; }
+        .dropdown {
+            position: absolute; left: 0; right: 0; top: 100%; z-index: 1000; background: #fff;
+            border: 1px solid #e4def7; border-radius: 0 0 10px 10px; max-height: 240px; overflow-y: auto;
+            box-shadow: 0 8px 20px rgba(108, 92, 231, 0.18); display: none;
+        }
+        .dropdown.open { display: block; }
+        .dropdown .opt { padding: 8px 10px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .dropdown .opt:hover { background: #f3f0ff; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; flex: none; display: inline-block; }
+        ul { list-style: none; margin: 0; padding: 0; }
+        .list-toggle { margin-top: 12px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+            font-size: 13px; font-weight: 700; color: #4a3f8a; user-select: none;
+            background: #ece6fb; border: 1px solid #ddd3f5; border-radius: 10px; padding: 7px 12px;
+            transition: background .15s ease; }
+        .list-toggle:hover { background: #e0d7fb; }
+        .list-toggle:active { transform: scale(0.98); }
+        .list-toggle .chev { display: inline-flex; align-items: center; justify-content: center;
+            width: 18px; height: 18px; border-radius: 50%; background: #6c5ce7; color: #fff;
+            font-size: 11px; line-height: 1; transition: transform .2s ease; }
+        .list-toggle.collapsed .chev { transform: rotate(-90deg); }
+        #rsList { max-height: 220px; overflow-y: auto; padding-right: 4px; margin-top: 8px; }
+        #rsList.collapsed { display: none; }
+        li { display: flex; align-items: center; gap: 8px; padding: 7px 2px; border-bottom: 1px solid #eee7fb; font-size: 14px; }
+        li .grow { flex: 1; }
+        .tag { font-size: 11px; background: #ece6fb; color: #6c5ce7; padding: 1px 8px; border-radius: 10px; font-weight: 600; }
+        .muted { color: #9b8fc7; font-size: 13px; }
+        .err { color: #c0392b; }
+        .banner { background: #fff3e0; border: 1px solid #ffcc80; color: #a15c00; padding: 10px 12px; border-radius: 12px; margin-bottom: 14px; font-size: 13px; }
+        #status { font-size: 12px; color: #9b8fc7; margin-top: 8px; }
+
+        /* 라벨 표시 토글 */
+        .label-filters { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+        .label-filters .lf-label { font-size: 12px; font-weight: 700; color: #4a3f8a; margin-right: 2px; }
+        #labelFilters { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+        .lf-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px;
+            cursor: pointer; font-size: 12.5px; font-weight: 700; border: 1.5px solid #e4def7; user-select: none;
+            transition: transform .12s ease; }
+        .lf-chip:active { transform: scale(0.96); }
+        .lf-chip .d { width: 10px; height: 10px; border-radius: 50%; }
+
+        /* 노선도(도식) */
+        #map {
+            width: 100%; height: 70vh; min-height: 460px; margin-top: 16px;
+            border-radius: 16px; overflow: hidden; background: #fff;
+            position: relative; z-index: 0; border: 1px solid #ece6fb;
+        }
+
+        @media (max-width: 600px) {
+            body { padding: 8px; }
+            .app { padding: 14px; border-radius: 18px; }
+            .topbar h1 { font-size: 18px; }
+            .row { gap: 6px; }
+            #rsPerson, #rsLabel, .searchbox { flex: 1 1 100%; }
+            #rsPerson, #rsLabel, .searchbox input { width: 100%; }
+            #saveBtn { width: 100%; }
+            #map { height: 58vh; min-height: 320px; }
+            #rsList { max-height: 160px; }
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <a class="back-link" href="../index.html">← 인사이드 와글</a>
+    <div class="topbar">
+        <h1>🗺️ 와글 지도</h1>
+        <p>공식 노선도 위에 와글들의 거주역을 표시해요 · 이름/라벨별로 등록</p>
+    </div>
+
+    <div id="setupBanner" class="banner" style="display:none"></div>
+
+    <div class="card">
+        <h2>등록 <span class="muted">이름 · 역 · 라벨 (기존 이름·라벨에 저장하면 덮어쓰기)</span></h2>
+        <div class="row">
+            <select id="rsPerson"><option value="">이름 선택</option></select>
+            <div class="searchbox">
+                <input id="rsSearch" placeholder="역 이름 검색 (예: 강남)" autocomplete="off" oninput="onSearchInput()">
+                <div id="searchResults" class="dropdown"></div>
+            </div>
+            <input id="rsLabel" list="labelOptions" placeholder="라벨 선택/입력">
+            <datalist id="labelOptions"></datalist>
+            <button id="saveBtn" onclick="saveResident()" disabled>저장</button>
+        </div>
+        <span id="rsMsg" class="muted"></span>
+        <div class="list-toggle collapsed" id="listToggle" onclick="toggleList()">
+            <span class="chev">▾</span> 거주지 목록 <span id="listCount" class="muted"></span>
+        </div>
+        <ul id="rsList" class="collapsed"></ul>
+        <div id="status"></div>
+    </div>
+
+    <div class="label-filters">
+        <span class="lf-label">지도 표시</span>
+        <span id="labelFilters"></span>
+    </div>
+
+    <div id="map"></div>
+</div>
+
+<script>
+/* ============================================================
+   설정 — 이 두 값만 채우면 됩니다
+   ============================================================ */
+const API_URL     = 'https://script.google.com/macros/s/AKfycbw42FiGd05ufy8u7AgQnQrBSEAM5X6x-9nv7HnTSrdAH47L7jYJ29rSGpwcV7TgmXk2Aw/exec';
+const WRITE_TOKEN = 'wagle-write-token'; // Apps Script 의 WRITE_TOKEN 과 동일하게
+
+/* 라벨별 색상: 지정 라벨은 고정색, 그 외는 팔레트에서 자동 배정 */
+const LABEL_COLORS = { '집': '#FFDC6B', '직장': '#ADD0FF' };
+const LABEL_FALLBACK = ['#8e24aa', '#fb8c00', '#00897b', '#6d4c41', '#3949ab', '#00838f', '#c2185b', '#5e35b1'];
+const labelColorMap = {};
+function labelColor(label) {
+    if (LABEL_COLORS[label]) return LABEL_COLORS[label];
+    if (!(label in labelColorMap)) labelColorMap[label] = LABEL_FALLBACK[Object.keys(labelColorMap).length % LABEL_FALLBACK.length];
+    return labelColorMap[label];
+}
+function textOn(hex) {
+    const c = hex.replace('#', '');
+    const r = parseInt(c.slice(0, 2), 16), g = parseInt(c.slice(2, 4), 16), b = parseInt(c.slice(4, 6), 16);
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.62 ? '#1a1a1a' : '#fff';
+}
+
+const esc = s => String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+const normName = s => String(s).replace(/\s+/g, ''); // 공백 제거 정규화 키
+
+/* ============================================================
+   도식 노선도 데이터
+   ============================================================ */
+const SCHEM = window.SUBWAY_SCHEMATIC || { w: 1000, h: 1000, stations: {} };
+const SVG_W = SCHEM.w, SVG_H = SCHEM.h;
+const STATION_NAMES = Object.keys(SCHEM.stations); // 도식에 존재하는 역 이름
+
+// SVG 좌표(x,y, y는 위→아래) → Leaflet CRS.Simple 좌표 [lat,lng] (y 반전)
+function schemLatLng(name) {
+    const xy = SCHEM.stations[normName(name)];
+    return xy ? [SVG_H - xy[1], xy[0]] : null;
+}
+
+/* ============================================================
+   상태
+   ============================================================ */
+let map = null, residentLayer = null, zFit = 0;
+let RESIDENTS = [];          // [{person, station, label, ...}]
+let NAMES = [];              // 이름 명단('시트1')
+
+/* ============================================================
+   거주지 그룹 / 핀
+   ============================================================ */
+let RESIDENT_GROUPS = [];
+const activeLabels = new Set(['집']); // 기본: 집만 표시
+function coordsOf(r) { return schemLatLng(r.station); }
+
+function buildGroups() {
+    const byPos = {};
+    RESIDENTS.forEach(r => {
+        if (!activeLabels.has(r.label)) return; // 꺼진 라벨은 제외
+        const pos = coordsOf(r);
+        if (!pos) return;
+        const key = pos[0].toFixed(1) + ',' + pos[1].toFixed(1);
+        (byPos[key] = byPos[key] || { pos, entries: [] }).entries.push(r);
+    });
+    RESIDENT_GROUPS = Object.values(byPos);
+}
+function groupLines(g)  { return [...new Set(g.entries.map(r => r.person))]; } // 핀엔 이름만 (라벨은 색으로 구분)
+function groupColor(g)  {
+    const labels = new Set(g.entries.map(e => e.label));
+    return labels.size === 1 ? labelColor(g.entries[0].label) : '#FCFF9E';
+}
+function dotHtml(color) {
+    return `<div style="position:absolute;transform:translate(-50%,-50%);width:12px;height:12px;border-radius:50%;
+        background:${color};border:2px solid #fff;box-shadow:0 0 3px rgba(0,0,0,.6)"></div>`;
+}
+function fullIcon(color, lines, fs) {
+    const inner = lines.map(l => `<div>${l}</div>`).join('');
+    const padY = Math.max(2, Math.round(fs * 0.25)), padX = padY + 5;
+    const html = `<div style="position:relative">
+        <div style="position:absolute;transform:translate(-50%,-100%);margin-top:-8px;background:${color};color:${textOn(color)};
+            padding:${padY}px ${padX}px;border-radius:10px;font-size:${fs}px;font-weight:700;white-space:nowrap;line-height:1.3;
+            box-shadow:0 1px 4px rgba(0,0,0,.35)">${inner}</div>
+        ${dotHtml(color)}</div>`;
+    return L.divIcon({ html, iconSize: [0, 0], iconAnchor: [0, 0], className: '' });
+}
+
+// 줌이 작을수록 모든 라벨이 "다같이" 작아짐 (개별 과축소 없음, 살짝 겹침 허용)
+function baseFontForZoom() {
+    return Math.max(6, Math.min(16, 11 + (map.getZoom() - zFit) * 2.4));
+}
+function relayout() {
+    if (!residentLayer || !map) return;
+    residentLayer.clearLayers();
+    const fs = baseFontForZoom(); // 전체 균일 크기
+    RESIDENT_GROUPS.forEach(g => {
+        L.marker(g.pos, { icon: fullIcon(groupColor(g), groupLines(g), fs), zIndexOffset: 1000 }).addTo(residentLayer);
+    });
+}
+
+function drawResidents() {
+    buildGroups();
+    relayout();
+}
+
+function renderList() {
+    document.getElementById('rsList').innerHTML = RESIDENTS.map(r => {
+        const ok = !!coordsOf(r);
+        return `<li>
+            <span class="dot" style="background:${labelColor(r.label)}"></span>
+            <span class="grow"><b>${r.person}</b> <span class="tag">${r.label}</span> ${r.station}
+                ${ok ? '' : '<span class="err">(노선도에 없는 역)</span>'}</span>
+            <button class="sm" onclick="delResident('${esc(r.person)}','${esc(r.label)}')">삭제</button>
+        </li>`;
+    }).join('');
+    document.getElementById('listCount').textContent = RESIDENTS.length ? `(${RESIDENTS.length})` : '';
+}
+function toggleList() {
+    const collapsed = document.getElementById('rsList').classList.toggle('collapsed');
+    document.getElementById('listToggle').classList.toggle('collapsed', collapsed);
+}
+
+function renderNames() {
+    const sel = document.getElementById('rsPerson');
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">이름 선택</option>' + NAMES.map(n => `<option value="${n}">${n}</option>`).join('');
+    if (NAMES.includes(cur)) sel.value = cur;
+}
+const DEFAULT_LABELS = ['집', '직장'];
+function renderLabelOptions() {
+    const used = RESIDENTS.map(r => r.label).filter(Boolean);
+    const uniq = [...new Set([...DEFAULT_LABELS, ...used])];
+    document.getElementById('labelOptions').innerHTML = uniq.map(l => `<option value="${l}"></option>`).join('');
+}
+
+// 라벨별 표시 on/off 토글 칩
+function renderLabelFilters() {
+    const labels = [...new Set(RESIDENTS.map(r => r.label).filter(Boolean))];
+    const rank = l => (l === '집' ? 0 : l === '직장' ? 1 : 2);
+    labels.sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+    document.getElementById('labelFilters').innerHTML = labels.map(l => {
+        const on = activeLabels.has(l), c = labelColor(l);
+        const style = on ? `background:${c};color:${textOn(c)};border-color:transparent;` : 'background:#fff;color:#9b8fc7;';
+        const dot = on ? '' : `<span class="d" style="background:${c}"></span>`;
+        return `<span class="lf-chip ${on ? 'on' : ''}" style="${style}" onclick="toggleLabel('${esc(l)}')">${dot}${l}</span>`;
+    }).join('');
+}
+function toggleLabel(l) {
+    if (activeLabels.has(l)) activeLabels.delete(l); else activeLabels.add(l);
+    renderLabelFilters();
+    drawResidents();
+}
+
+/* ============================================================
+   역 검색 자동완성 (도식 역 이름에서 필터 — 호출 없음)
+   ============================================================ */
+let pickedStation = null; // 역 이름
+
+function onSearchInput() {
+    const q = document.getElementById('rsSearch').value.trim();
+    const box = document.getElementById('searchResults');
+    pickedStation = null;
+    syncSaveBtn();
+    if (!q) { box.className = 'dropdown'; box.innerHTML = ''; return; }
+    const qn = normName(q);
+    const hits = STATION_NAMES.filter(n => n.indexOf(qn) !== -1).slice(0, 40);
+    if (!hits.length) { box.innerHTML = '<div class="opt muted">검색 결과 없음</div>'; box.className = 'dropdown open'; return; }
+    box.innerHTML = hits.map(n => `<div class="opt" onclick="pick('${esc(n)}')">${n}</div>`).join('');
+    box.className = 'dropdown open';
+}
+function pick(name) {
+    pickedStation = name;
+    document.getElementById('rsSearch').value = name;
+    const box = document.getElementById('searchResults');
+    box.className = 'dropdown'; box.innerHTML = '';
+    syncSaveBtn();
+}
+function syncSaveBtn() {
+    const person = document.getElementById('rsPerson').value.trim();
+    const label = document.getElementById('rsLabel').value.trim();
+    document.getElementById('saveBtn').disabled = !(person && pickedStation && label);
+}
+document.getElementById('rsPerson').addEventListener('change', syncSaveBtn);
+document.getElementById('rsLabel').addEventListener('input', syncSaveBtn);
+
+/* ============================================================
+   서버 통신 (Apps Script = 거주지/명단 저장소)
+   ============================================================ */
+async function apiGet() {
+    let res, text;
+    try { res = await fetch(API_URL); }
+    catch (e) { throw new Error('네트워크/CORS 차단으로 응답을 못 받았습니다 (' + e.message + ')'); }
+    text = await res.text();
+    let data;
+    try { data = JSON.parse(text); }
+    catch (e) { throw new Error('JSON 이 아닌 응답 (상태 ' + res.status + '). 앞부분: ' + text.slice(0, 150)); }
+    if (!data.ok) throw new Error(data.error || '로드 실패');
+    return data;
+}
+async function apiPost(payload) {
+    const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ ...payload, token: WRITE_TOKEN }) });
+    return res.json();
+}
+async function reload() {
+    const data = await apiGet();
+    RESIDENTS = data.residents || [];
+    NAMES = data.names || [];
+    renderNames();
+    renderLabelOptions();
+    renderLabelFilters();
+    drawResidents();
+    renderList();
+}
+async function saveResident() {
+    const person = document.getElementById('rsPerson').value.trim();
+    const label  = document.getElementById('rsLabel').value.trim();
+    const station = pickedStation;
+    if (!person || !station || !label) return;
+    const btn = document.getElementById('saveBtn'), msg = document.getElementById('rsMsg');
+    btn.disabled = true; msg.textContent = '저장 중…'; msg.className = 'muted';
+    try {
+        const r = await apiPost({ action: 'saveResident', person, label, station });
+        if (!r.ok) throw new Error(r.error);
+        document.getElementById('rsSearch').value = '';
+        document.getElementById('rsLabel').value = '';
+        pickedStation = null;
+        msg.textContent = r.updated ? '수정됨(덮어쓰기)' : '저장됨';
+        await reload();
+    } catch (e) { msg.textContent = e.message; msg.className = 'err'; }
+    syncSaveBtn();
+}
+async function delResident(person, label) {
+    if (!confirm(`"${person} · ${label}" 을(를) 삭제할까요?`)) return;
+    await apiPost({ action: 'delResident', person, label });
+    await reload();
+}
+
+/* ============================================================
+   시작
+   ============================================================ */
+function showFatal(msg) {
+    const b = document.getElementById('setupBanner');
+    b.style.display = 'block';
+    b.innerHTML = '⛔ ' + msg;
+}
+
+(async function init() {
+    if (typeof L === 'undefined' || !L.map) {
+        showFatal('지도 라이브러리(Leaflet)를 불러오지 못했습니다. 인터넷/unpkg.com 접근을 확인하세요.');
+        return;
+    }
+    if (!STATION_NAMES.length) {
+        showFatal('노선도 데이터(subwaySchematic.js)를 불러오지 못했습니다.');
+        return;
+    }
+
+    // 도식 노선도(SVG)를 배경 이미지로 깔기 (CRS.Simple)
+    map = L.map('map', { crs: L.CRS.Simple, minZoom: -5, maxZoom: 3, zoomSnap: 0.25, attributionControl: true });
+    const bounds = [[0, 0], [SVG_H, SVG_W]];
+    L.imageOverlay('subwaymap.svg', bounds, { attribution: '노선도 ⓒ Wikimedia Commons' }).addTo(map);
+    map.fitBounds(bounds);
+    map.setMaxBounds(L.latLngBounds(bounds).pad(0.3));
+    zFit = map.getZoom();
+    residentLayer = L.layerGroup().addTo(map);
+    map.on('zoomend moveend', relayout);
+    renderLabelOptions();
+    document.getElementById('status').textContent = `도식 노선도 · 역 ${STATION_NAMES.length}개 (출처: Wikimedia Commons)`;
+
+    // 거주지/명단(Apps Script)
+    if (!API_URL) {
+        showFatal('거주지 저장을 쓰려면 <code>waglemap.html</code> 상단 <b>API_URL</b> 을 넣어주세요. (노선도는 설정 없이도 보입니다)');
+        return;
+    }
+    try { await reload(); }
+    catch (e) {
+        showFatal('거주지/명단 로드 실패 — ' + e.message);
+        document.getElementById('rsMsg').textContent = e.message;
+        document.getElementById('rsMsg').className = 'err';
+    }
+})();
+</script>
+</body>
+</html>

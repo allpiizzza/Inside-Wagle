@@ -1,0 +1,531 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>와글 지도 — 노선도 & 거주역</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="subwayFallback.js"></script><!-- window.SUBWAY_FALLBACK (원본 fetch 실패 시 대비) -->
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: #37352f;
+            padding: 15px;
+            min-height: 100vh;
+            min-height: 100dvh;
+            background: radial-gradient(ellipse at 20% 10%, #fff6e0 0%, #fdfbf7 40%, #f3f0ff 100%);
+            background-attachment: fixed;
+        }
+
+        .app {
+            position: relative;
+            z-index: 1;
+            width: 100%;
+            max-width: 920px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.82);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 2px solid #ffffff;
+            border-radius: 24px;
+            box-shadow: 0 20px 50px rgba(108, 92, 231, 0.12);
+            padding: 22px;
+        }
+
+        .back-link { font-size: 12px; color: #9b8fc7; text-decoration: none; display: inline-block; margin-bottom: 8px; font-weight: 600; }
+        .back-link:hover { color: #6c5ce7; }
+
+        .topbar { margin-bottom: 16px; }
+        .topbar h1 {
+            margin: 0 0 4px 0; font-size: 20px; font-weight: 800; letter-spacing: -0.3px;
+            background: linear-gradient(to right, #6c5ce7, #4a90e2);
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .topbar p { margin: 0; font-size: 12.5px; color: #9b8fc7; font-weight: 600; line-height: 1.5; }
+
+        /* 입력 카드 */
+        .card { background: rgba(118, 92, 231, 0.06); border: 1px solid #ece6fb; border-radius: 16px; padding: 14px; }
+        .card h2 { margin: 0 0 10px; font-size: 14px; color: #4a3f8a; }
+        .card h2 .muted { font-weight: 400; }
+
+        input, button, select { font-size: 14px; font-family: inherit; }
+        input, select {
+            padding: 9px 11px; border: 1.5px solid #e4def7; border-radius: 10px; background: #fff; color: #37352f;
+        }
+        input:focus, select:focus { outline: none; border-color: #a370f7; }
+        button {
+            padding: 10px 16px; border: 0; border-radius: 12px; font-weight: 700; cursor: pointer;
+            background: linear-gradient(135deg, #a370f7, #6c5ce7); color: #fff;
+            box-shadow: 0 6px 14px rgba(108, 92, 231, 0.28); transition: transform .15s ease;
+        }
+        button:active { transform: scale(0.97); }
+        button.sm { padding: 4px 10px; font-size: 12px; border-radius: 8px; background: #cfc7ea; color: #4a3f8a; box-shadow: none; }
+        button:disabled { background: #d6d2e6; color: #fff; box-shadow: none; cursor: default; }
+
+        .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-start; }
+        #rsPerson { flex: 0 1 130px; }
+        #rsLabel  { flex: 0 1 130px; }
+        .searchbox { position: relative; flex: 1 1 180px; }
+        .searchbox input { width: 100%; }
+        .dropdown {
+            position: absolute; left: 0; right: 0; top: 100%; z-index: 1000; background: #fff;
+            border: 1px solid #e4def7; border-radius: 0 0 10px 10px; max-height: 240px; overflow-y: auto;
+            box-shadow: 0 8px 20px rgba(108, 92, 231, 0.18); display: none;
+        }
+        .dropdown.open { display: block; }
+        .dropdown .opt { padding: 8px 10px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .dropdown .opt:hover { background: #f3f0ff; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; flex: none; display: inline-block; }
+        ul { list-style: none; margin: 0; padding: 0; }
+        .list-toggle { margin-top: 12px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+            font-size: 13px; font-weight: 700; color: #4a3f8a; user-select: none;
+            background: #ece6fb; border: 1px solid #ddd3f5; border-radius: 10px; padding: 7px 12px;
+            transition: background .15s ease; }
+        .list-toggle:hover { background: #e0d7fb; }
+        .list-toggle:active { transform: scale(0.98); }
+        .list-toggle .chev { display: inline-flex; align-items: center; justify-content: center;
+            width: 18px; height: 18px; border-radius: 50%; background: #6c5ce7; color: #fff;
+            font-size: 11px; line-height: 1; transition: transform .2s ease; }
+        .list-toggle.collapsed .chev { transform: rotate(-90deg); }
+        #rsList { max-height: 220px; overflow-y: auto; padding-right: 4px; margin-top: 8px; }
+        #rsList.collapsed { display: none; }
+        li { display: flex; align-items: center; gap: 8px; padding: 7px 2px; border-bottom: 1px solid #eee7fb; font-size: 14px; }
+        li .grow { flex: 1; }
+        .tag { font-size: 11px; background: #ece6fb; color: #6c5ce7; padding: 1px 8px; border-radius: 10px; font-weight: 600; }
+        .muted { color: #9b8fc7; font-size: 13px; }
+        .err { color: #c0392b; }
+        .banner { background: #fff3e0; border: 1px solid #ffcc80; color: #a15c00; padding: 10px 12px; border-radius: 12px; margin-bottom: 14px; font-size: 13px; }
+        #status { font-size: 12px; color: #9b8fc7; margin-top: 8px; }
+
+        /* 지도 */
+        #map {
+            width: 100%; height: 70vh; min-height: 460px; margin-top: 16px;
+            border-radius: 16px; overflow: hidden; background: #fff;
+            position: relative; z-index: 0; border: 1px solid #ece6fb;
+        }
+        /* 배경 타일을 흑백 + 흐리게 → 노선 색이 돋보이게 */
+        .leaflet-tile-pane { filter: grayscale(1); opacity: 0.5; }
+
+        /* 모바일 대응 */
+        @media (max-width: 600px) {
+            body { padding: 8px; }
+            .app { padding: 14px; border-radius: 18px; }
+            .topbar h1 { font-size: 18px; }
+            .row { gap: 6px; }
+            #rsPerson, #rsLabel, .searchbox { flex: 1 1 100%; }
+            #rsPerson, #rsLabel, .searchbox input { width: 100%; }
+            #saveBtn { width: 100%; }
+            #map { height: 58vh; min-height: 320px; }
+            #rsList { max-height: 160px; }
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <a class="back-link" href="../index.html">← 인사이드 와글</a>
+    <div class="topbar">
+        <h1>🗺️ 와글 지도</h1>
+        <p>이름/라벨별로 등록</p>
+    </div>
+
+    <div id="setupBanner" class="banner" style="display:none"></div>
+
+    <div class="card">
+        <h2>등록 <span class="muted">이름 · 역 · 라벨 (기존 이름·라벨에 저장하면 덮어쓰기)</span></h2>
+        <div class="row">
+            <select id="rsPerson"><option value="">이름 선택</option></select>
+            <div class="searchbox">
+                <input id="rsSearch" placeholder="역 이름 검색 (예: 강남)" autocomplete="off" oninput="onSearchInput()">
+                <div id="searchResults" class="dropdown"></div>
+            </div>
+            <input id="rsLabel" list="labelOptions" placeholder="라벨 선택/입력">
+            <datalist id="labelOptions"></datalist>
+            <button id="saveBtn" onclick="saveResident()" disabled>저장</button>
+        </div>
+        <span id="rsMsg" class="muted"></span>
+        <div class="list-toggle" id="listToggle" onclick="toggleList()">
+            <span class="chev">▾</span> 거주지 목록 <span id="listCount" class="muted"></span>
+        </div>
+        <ul id="rsList"></ul>
+        <div id="status"></div>
+    </div>
+
+    <div id="map"></div>
+</div>
+
+<script>
+/* ============================================================
+   설정 — 이 두 값만 채우면 됩니다
+   ============================================================ */
+const API_URL     = 'https://script.google.com/macros/s/AKfycbw42FiGd05ufy8u7AgQnQrBSEAM5X6x-9nv7HnTSrdAH47L7jYJ29rSGpwcV7TgmXk2Aw/exec';
+const WRITE_TOKEN = 'wagle-write-token'; // Apps Script 의 WRITE_TOKEN 과 동일하게
+
+/* 노선 코드 → 한글명/색상 */
+const LINE_META = {
+    L1:{ko:'1호선',c:'#0052A4'}, L2:{ko:'2호선',c:'#00A84D'}, L3:{ko:'3호선',c:'#EF7C1C'},
+    L4:{ko:'4호선',c:'#00A5DE'}, L5:{ko:'5호선',c:'#996CAC'}, L6:{ko:'6호선',c:'#CD7C2F'},
+    L7:{ko:'7호선',c:'#747F00'}, L8:{ko:'8호선',c:'#E6186C'}, L9:{ko:'9호선',c:'#BDB092'},
+    AREX:{ko:'공항철도',c:'#0090D2'}, SUINBUNDANG:{ko:'수인분당선',c:'#FABE00'},
+    GYEONGUI:{ko:'경의중앙선',c:'#77C4A3'}, GYEONGCHUN:{ko:'경춘선',c:'#0C8E72'},
+    SINBUNDANG:{ko:'신분당선',c:'#D4003B'}, INCHEON1:{ko:'인천1호선',c:'#7CA8D5'},
+    INCHEON2:{ko:'인천2호선',c:'#ED8B00'}, SEOHAE:{ko:'서해선',c:'#81A914'},
+    UIJEONGBU:{ko:'의정부경전철',c:'#FDA600'}, EVERLINE:{ko:'용인에버라인',c:'#509F22'},
+    UISINSEOL:{ko:'우이신설선',c:'#B7C452'}, GYEONGGANG:{ko:'경강선',c:'#003DA5'},
+    SILLIM:{ko:'신림선',c:'#6789CA'}, GIMPO:{ko:'김포골드라인',c:'#AD8605'}, GTXA:{ko:'GTX-A',c:'#9A6292'},
+};
+const lineKo    = code => (LINE_META[code] && LINE_META[code].ko) || code;
+const lineColor = code => (LINE_META[code] && LINE_META[code].c)  || '#888';
+
+// 라벨별 색상: 지정 라벨은 고정색, 그 외는 팔레트에서 자동 배정
+const LABEL_COLORS = { '집': '#FFDC6B', '직장': '#ADD0FF' };
+const LABEL_FALLBACK = ['#8e24aa', '#fb8c00', '#00897b', '#6d4c41', '#3949ab', '#00838f', '#c2185b', '#5e35b1'];
+const labelColorMap = {};
+function labelColor(label) {
+    if (LABEL_COLORS[label]) return LABEL_COLORS[label];
+    if (!(label in labelColorMap)) labelColorMap[label] = LABEL_FALLBACK[Object.keys(labelColorMap).length % LABEL_FALLBACK.length];
+    return labelColorMap[label];
+}
+// 배경색 밝기에 따라 글자색(흰/검) 자동 선택
+function textOn(hex) {
+    const c = hex.replace('#', '');
+    const r = parseInt(c.slice(0, 2), 16), g = parseInt(c.slice(2, 4), 16), b = parseInt(c.slice(4, 6), 16);
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.62 ? '#1a1a1a' : '#fff';
+}
+
+// 공공데이터 소스 (매일 자동 갱신, CORS 허용 → 브라우저에서 직접 로드 가능)
+const SUBWAY_CSV = 'https://raw.githubusercontent.com/kyckang/SeoulTransitMap_data/main/v1/seoul_subway_stations.csv';
+
+function parseSubwayCsv(text) {
+    const rows = text.trim().split(/\r?\n/).slice(1); // 헤더 제거
+    const out = [];
+    for (const row of rows) {
+        const c = row.split(',');
+        if (c.length < 9) continue;
+        // station_cd,line,fr_code,name_ko,name_en,name_zh,name_ja,lat,lng,rt_name
+        const lat = Number(c[7]), lng = Number(c[8]);
+        if (!lat || !lng) continue;
+        out.push({ cd: Number(c[0]), line: c[1], name: c[3], lat, lng });
+    }
+    return out;
+}
+
+const esc = s => String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+/* ============================================================
+   상태
+   ============================================================ */
+let map = null, lineLayer = null, residentLayer = null;
+let STATIONS = [];           // 공공데이터 역 목록
+let RESIDENTS = [];          // [{person, station, label, lat, lng}]
+let NAMES = [];              // 이름 명단('시트1')
+const stationByName = {};    // name -> station (대표 1개)
+
+/* ============================================================
+   노선도 그리기 (공공데이터)
+   ============================================================ */
+function drawLines() {
+    lineLayer.clearLayers();
+    Object.keys(stationByName).forEach(k => delete stationByName[k]);
+
+    const byLine = {};
+    STATIONS.forEach(s => {
+        (byLine[s.line] = byLine[s.line] || []).push(s);
+        if (!stationByName[s.name]) stationByName[s.name] = s; // 환승역은 첫 좌표 사용
+    });
+
+    Object.entries(byLine).forEach(([line, list]) => {
+        list.sort((a, b) => a.cd - b.cd); // station_cd = 실제 노선 순서
+        if (list.length < 2) return;
+        L.polyline(list.map(s => [s.lat, s.lng]), {
+            color: lineColor(line), weight: 4, opacity: 1,
+        }).addTo(lineLayer);
+    });
+}
+
+/* ============================================================
+   거주지 핀 그리기 (이름별 색 / 라벨 표시)
+   ============================================================ */
+function coordsOf(r) {
+    if (r.lat && r.lng) return [r.lat, r.lng];          // 저장된 좌표 우선
+    const s = stationByName[r.station];
+    return s ? [s.lat, s.lng] : null;
+}
+
+let RESIDENT_GROUPS = []; // 같은 좌표로 묶인 거주지 그룹
+
+function buildGroups() {
+    const byPos = {};
+    RESIDENTS.forEach(r => {
+        const pos = coordsOf(r);
+        if (!pos) return;
+        const key = pos[0].toFixed(5) + ',' + pos[1].toFixed(5);
+        (byPos[key] = byPos[key] || { pos, entries: [] }).entries.push(r);
+    });
+    RESIDENT_GROUPS = Object.values(byPos);
+}
+
+function groupLines(g)  { return g.entries.map(r => `${r.person}·${r.label}`); }
+function groupColor(g)  {
+    const labels = new Set(g.entries.map(e => e.label));
+    return labels.size === 1 ? labelColor(g.entries[0].label) : '#FCFF9E'; // 라벨 혼재 시
+}
+
+function dotHtml(color) {
+    return `<div style="position:absolute;transform:translate(-50%,-50%);width:12px;height:12px;border-radius:50%;
+        background:${color};border:2px solid #fff;box-shadow:0 0 3px rgba(0,0,0,.6)"></div>`;
+}
+function fullIcon(color, lines, fs) {
+    const inner = lines.map(l => `<div>${l}</div>`).join('');
+    const padY = Math.max(2, Math.round(fs * 0.25)), padX = padY + 5;
+    const html = `<div style="position:relative">
+        <div style="position:absolute;transform:translate(-50%,-100%);margin-top:-8px;background:${color};color:${textOn(color)};
+            padding:${padY}px ${padX}px;border-radius:10px;font-size:${fs}px;font-weight:700;white-space:nowrap;line-height:1.3;
+            box-shadow:0 1px 4px rgba(0,0,0,.35)">${inner}</div>
+        ${dotHtml(color)}</div>`;
+    return L.divIcon({ html, iconSize: [0, 0], iconAnchor: [0, 0], className: '' });
+}
+
+// 줌이 작을수록 기본 폰트도 작게 (전체적으로 축소) → 그 위에 겹침 시 추가 축소
+function baseFontForZoom() {
+    const z = Math.max(7, Math.min(14, map.getZoom())); // 7~14 로 클램프
+    return 6 + (z - 7) * (13 - 6) / (14 - 7);            // 줌7→6px, 줌14→13px
+}
+function relayout() {
+    if (!residentLayer || !map) return;
+    residentLayer.clearLayers();
+    const GAP_Y = 16;
+    const placed = [];
+    // 현재 줌 기준 기본 폰트에서 단계적으로 줄여가는 후보 크기들
+    const base = baseFontForZoom();
+    const sizes = [];
+    for (let fs = base; fs >= 5; fs -= 1.5) sizes.push(Math.round(fs * 2) / 2);
+    if (!sizes.length) sizes.push(5);
+    // 위쪽(북쪽) 그룹을 우선 배치
+    const groups = RESIDENT_GROUPS.slice().sort((a, b) => b.pos[0] - a.pos[0]);
+    groups.forEach(g => {
+        const color = groupColor(g), lines = groupLines(g);
+        const maxLen = Math.max(...lines.map(l => l.length));
+        const p = map.latLngToContainerPoint(L.latLng(g.pos[0], g.pos[1]));
+
+        // 겹치지 않는 가장 큰 폰트를 찾고, 없으면 가장 작은 폰트로라도 표시(숨기지 않음)
+        let chosen = sizes[sizes.length - 1], chosenBox = null;
+        for (const fs of sizes) {
+            const w = maxLen * fs * 0.62 + 12;
+            const h = lines.length * fs * 1.4 + 6;
+            const box = { x1: p.x - w / 2, y1: p.y - GAP_Y - h, x2: p.x + w / 2, y2: p.y - GAP_Y };
+            const hit = placed.some(b => !(box.x2 < b.x1 || box.x1 > b.x2 || box.y2 < b.y1 || box.y1 > b.y2));
+            chosen = fs; chosenBox = box;
+            if (!hit) break; // 이 크기면 안 겹침 → 확정
+        }
+        placed.push(chosenBox);
+        L.marker(g.pos, { icon: fullIcon(color, lines, chosen), zIndexOffset: 1000 }).addTo(residentLayer);
+    });
+}
+
+function drawResidents() {
+    buildGroups();
+    const points = RESIDENT_GROUPS.map(g => g.pos);
+    if (points.length) map.fitBounds(L.latLngBounds(points), { padding: [60, 60], maxZoom: 14 });
+    relayout();
+}
+
+function renderList() {
+    document.getElementById('rsList').innerHTML = RESIDENTS.map(r => {
+        const ok = !!coordsOf(r);
+        return `<li>
+            <span class="dot" style="background:${labelColor(r.label)}"></span>
+            <span class="grow"><b>${r.person}</b> <span class="tag">${r.label}</span> ${r.station}
+                ${ok ? '' : '<span class="err">(입력 없음)</span>'}</span>
+            <button class="sm" onclick="delResident('${esc(r.person)}','${esc(r.label)}')">삭제</button>
+        </li>`;
+    }).join('');
+    document.getElementById('listCount').textContent = RESIDENTS.length ? `(${RESIDENTS.length})` : '';
+}
+
+function toggleList() {
+    const collapsed = document.getElementById('rsList').classList.toggle('collapsed');
+    document.getElementById('listToggle').classList.toggle('collapsed', collapsed);
+}
+
+function renderNames() {
+    const sel = document.getElementById('rsPerson');
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">이름 선택</option>' + NAMES.map(n => `<option value="${n}">${n}</option>`).join('');
+    if (NAMES.includes(cur)) sel.value = cur;
+}
+
+const DEFAULT_LABELS = ['집', '직장'];
+function renderLabelOptions() {
+    const used = RESIDENTS.map(r => r.label).filter(Boolean);
+    const uniq = [...new Set([...DEFAULT_LABELS, ...used])];
+    document.getElementById('labelOptions').innerHTML = uniq.map(l => `<option value="${l}"></option>`).join('');
+}
+
+/* ============================================================
+   역 검색 자동완성 (공공데이터, 로컬 필터 — 호출 없음)
+   ============================================================ */
+let pickedStation = null; // {name, lat, lng}
+
+function onSearchInput() {
+    const q = document.getElementById('rsSearch').value.trim();
+    const box = document.getElementById('searchResults');
+    pickedStation = null;
+    syncSaveBtn();
+    if (!q) { box.className = 'dropdown'; box.innerHTML = ''; return; }
+
+    const seen = {};
+    for (const s of STATIONS) {
+        if (s.name.indexOf(q) === -1) continue;
+        (seen[s.name] = seen[s.name] || new Set()).add(s.line);
+        if (Object.keys(seen).length >= 40) break;
+    }
+    const names = Object.keys(seen);
+    if (!names.length) { box.innerHTML = '<div class="opt muted">검색 결과 없음</div>'; box.className = 'dropdown open'; return; }
+
+    box.innerHTML = names.map(name => {
+        const lines = [...seen[name]];
+        const dots = lines.map(l => `<span class="dot" style="background:${lineColor(l)}"></span>`).join('');
+        const labels = lines.map(lineKo).join('·');
+        return `<div class="opt" onclick="pick('${esc(name)}')">
+            ${dots}<span>${name} <span class="muted">${labels}</span></span></div>`;
+    }).join('');
+    box.className = 'dropdown open';
+}
+
+function pick(name) {
+    const s = stationByName[name];
+    pickedStation = s ? { name, lat: s.lat, lng: s.lng } : { name };
+    document.getElementById('rsSearch').value = name;
+    const box = document.getElementById('searchResults');
+    box.className = 'dropdown'; box.innerHTML = '';
+    syncSaveBtn();
+}
+
+function syncSaveBtn() {
+    const person = document.getElementById('rsPerson').value.trim();
+    const label = document.getElementById('rsLabel').value.trim();
+    document.getElementById('saveBtn').disabled = !(person && pickedStation && label);
+}
+document.getElementById('rsPerson').addEventListener('change', syncSaveBtn);
+document.getElementById('rsLabel').addEventListener('input', syncSaveBtn);
+
+/* ============================================================
+   서버 통신 (Apps Script = 거주지/명단 저장소)
+   ============================================================ */
+async function apiGet() {
+    let res, text;
+    try { res = await fetch(API_URL); }
+    catch (e) { throw new Error('네트워크/CORS 차단으로 응답을 못 받았습니다 (' + e.message + ')'); }
+    text = await res.text();
+    let data;
+    try { data = JSON.parse(text); }
+    catch (e) { throw new Error('JSON 이 아닌 응답 (상태 ' + res.status + '). 앞부분: ' + text.slice(0, 150)); }
+    if (!data.ok) throw new Error(data.error || '로드 실패');
+    return data;
+}
+async function apiPost(payload) {
+    const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ ...payload, token: WRITE_TOKEN }) });
+    return res.json();
+}
+
+async function reload() {
+    const data = await apiGet();
+    RESIDENTS = data.residents || [];
+    NAMES = data.names || [];
+    renderNames();
+    renderLabelOptions();
+    drawResidents();
+    renderList();
+}
+
+async function saveResident() {
+    const person = document.getElementById('rsPerson').value.trim();
+    const label  = document.getElementById('rsLabel').value.trim();
+    if (!person || !pickedStation || !label) return;
+    const btn = document.getElementById('saveBtn'), msg = document.getElementById('rsMsg');
+    btn.disabled = true; msg.textContent = '저장 중…'; msg.className = 'muted';
+    try {
+        const r = await apiPost({
+            action: 'saveResident', person, label,
+            station: pickedStation.name, lat: pickedStation.lat, lng: pickedStation.lng,
+        });
+        if (!r.ok) throw new Error(r.error);
+        // 역/라벨만 비우고 이름은 유지 (같은 사람 라벨 추가 편하게)
+        document.getElementById('rsSearch').value = '';
+        document.getElementById('rsLabel').value = '';
+        pickedStation = null;
+        msg.textContent = r.updated ? '수정됨(덮어쓰기)' : '저장됨';
+        await reload();
+    } catch (e) { msg.textContent = e.message; msg.className = 'err'; }
+    syncSaveBtn();
+}
+
+async function delResident(person, label) {
+    if (!confirm(`"${person} · ${label}" 을(를) 삭제할까요?`)) return;
+    await apiPost({ action: 'delResident', person, label });
+    await reload();
+}
+
+/* ============================================================
+   시작
+   ============================================================ */
+function showFatal(msg) {
+    const b = document.getElementById('setupBanner');
+    b.style.display = 'block';
+    b.innerHTML = '⛔ ' + msg;
+}
+
+(async function init() {
+    if (typeof L === 'undefined' || !L.map) {
+        showFatal('지도 라이브러리(Leaflet)를 불러오지 못했습니다. 인터넷 또는 unpkg.com 접근을 확인하세요.');
+        return;
+    }
+    map = L.map('map').setView([37.55, 126.99], 11);
+    // 키 없는 OSM 타일 + CSS 흑백/흐림(.leaflet-tile-pane) → 노선 색 강조
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        maxZoom: 19, attribution: '© OpenStreetMap contributors',
+    }).addTo(map);
+    lineLayer = L.layerGroup().addTo(map);
+    residentLayer = L.layerGroup().addTo(map);
+    map.on('zoomend moveend', relayout); // 줌/이동 때 라벨 겹침 재계산
+    renderLabelOptions(); // 기본 라벨 먼저 채움
+
+
+
+    // 1) 노선도(공공데이터)
+    let source = '최신';
+    try {
+        const res = await fetch(SUBWAY_CSV);
+        if (!res.ok) throw new Error('원본 응답 ' + res.status);
+        STATIONS = parseSubwayCsv(await res.text());
+        if (STATIONS.length < 100) throw new Error('데이터가 비정상적으로 적음');
+    } catch (e) {
+        STATIONS = window.SUBWAY_FALLBACK || [];
+        source = '폴백';
+    }
+    if (STATIONS.length) {
+        drawLines();
+        document.getElementById('status').textContent = `노선도 데이터: ${STATIONS.length}역 (${source})`;
+    } else {
+        document.getElementById('status').innerHTML = '<span class="err">노선도 데이터를 불러오지 못했습니다.</span>';
+    }
+
+    // 2) 거주지/명단(Apps Script)
+    if (!API_URL) {
+        showFatal('거주지 저장을 쓰려면 <code>waglemap.html</code> 상단 <b>API_URL</b> 을 넣어주세요. (노선도는 설정 없이도 보입니다)');
+        return;
+    }
+    try { await reload(); }
+    catch (e) {
+        showFatal('거주지/명단 로드 실패 — ' + e.message);
+        document.getElementById('rsMsg').textContent = e.message;
+        document.getElementById('rsMsg').className = 'err';
+    }
+})();
+</script>
+</body>
+</html>
