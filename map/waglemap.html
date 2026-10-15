@@ -173,7 +173,7 @@ const API_URL     = 'https://script.google.com/macros/s/AKfycbw42FiGd05ufy8u7AgQ
 const WRITE_TOKEN = 'wagle-write-token'; // Apps Script 의 WRITE_TOKEN 과 동일하게
 
 /* 라벨별 색상: 지정 라벨은 고정색, 그 외는 팔레트에서 자동 배정 */
-const LABEL_COLORS = { '집': '#FFDC6B', '직장': '#ADD0FF' };
+const LABEL_COLORS = { '집': '#FFDC6B', '직장': '#ADD0FF', '기타': '#B8FF8F' };
 const LABEL_FALLBACK = ['#8e24aa', '#fb8c00', '#00897b', '#6d4c41', '#3949ab', '#00838f', '#c2185b', '#5e35b1'];
 const labelColorMap = {};
 function labelColor(label) {
@@ -289,7 +289,7 @@ function renderNames() {
     sel.innerHTML = '<option value="">이름 선택</option>' + NAMES.map(n => `<option value="${n}">${n}</option>`).join('');
     if (NAMES.includes(cur)) sel.value = cur;
 }
-const DEFAULT_LABELS = ['집', '직장'];
+const DEFAULT_LABELS = ['집', '직장', '기타'];
 function renderLabelOptions() {
     const sel = document.getElementById('rsLabel');
     const cur = sel.value;
