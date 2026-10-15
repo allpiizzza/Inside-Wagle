@@ -142,12 +142,11 @@
         <h2>등록 <span class="muted">이름 · 역 · 라벨 (기존 이름·라벨에 저장하면 덮어쓰기)</span></h2>
         <div class="row">
             <select id="rsPerson"><option value="">이름 선택</option></select>
+            <select id="rsLabel"><option value="">라벨 선택</option></select>
             <div class="searchbox">
                 <input id="rsSearch" placeholder="역 이름 검색 (예: 강남)" autocomplete="off" oninput="onSearchInput()">
                 <div id="searchResults" class="dropdown"></div>
             </div>
-            <input id="rsLabel" list="labelOptions" placeholder="라벨 선택/입력">
-            <datalist id="labelOptions"></datalist>
             <button id="saveBtn" onclick="saveResident()" disabled>저장</button>
         </div>
         <span id="rsMsg" class="muted"></span>
@@ -292,9 +291,12 @@ function renderNames() {
 }
 const DEFAULT_LABELS = ['집', '직장'];
 function renderLabelOptions() {
+    const sel = document.getElementById('rsLabel');
+    const cur = sel.value;
     const used = RESIDENTS.map(r => r.label).filter(Boolean);
     const uniq = [...new Set([...DEFAULT_LABELS, ...used])];
-    document.getElementById('labelOptions').innerHTML = uniq.map(l => `<option value="${l}"></option>`).join('');
+    sel.innerHTML = '<option value="">라벨 선택</option>' + uniq.map(l => `<option value="${l}">${l}</option>`).join('');
+    if (uniq.includes(cur)) sel.value = cur;
 }
 
 // 라벨별 표시 on/off 토글 칩
@@ -345,7 +347,7 @@ function syncSaveBtn() {
     document.getElementById('saveBtn').disabled = !(person && pickedStation && label);
 }
 document.getElementById('rsPerson').addEventListener('change', syncSaveBtn);
-document.getElementById('rsLabel').addEventListener('input', syncSaveBtn);
+document.getElementById('rsLabel').addEventListener('change', syncSaveBtn);
 
 /* ============================================================
    서버 통신 (Apps Script = 거주지/명단 저장소)
