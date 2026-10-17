@@ -440,7 +440,7 @@
 
         { name: "북큐1회연속채우기권", lines: ["북큐 1회연속", "채우기권"], weight: 12, color1: "#b224ef", color2: "#7579ff" },
         { name: "프리덤1회연속채우기권", lines: ["프리덤 1회연속", "채우기권"], weight: 12, color1: "#e0c3fc", color2: "#8ec5fc" },
-        { name: "하닉오르면한번더~!", lines: ["하닉 오르면", "한번더~!"], weight: 12, color1: "#fa709a", color2: "#fee140" },
+        { name: "랜덤게임~!", lines: ["랜덤게임~!"], weight: 12, color1: "#fa709a", color2: "#fee140" },
         { name: "구립도서관무료입장권", lines: ["구립도서관", "무료입장권"], weight: 12, color1: "#a18cd1", color2: "#fbc2eb" }
     ];
 
@@ -448,17 +448,6 @@
     let currentRotation = 0;
     let isSpinning = false;
     let cachedRankings = [];
-
-    // 🎁 "하닉오르면한번더~!" 가 나왔던 사람은 한 번 더 돌릴 수 있다.
-    //    서버(GAS)가 같은 이름의 재참여를 막으므로, 보너스 스핀만
-    //    "1005 수리 (한번더)" 처럼 태그를 붙여 보내 차단을 피한다.
-    //    남은 횟수는 랭킹에서 센다: 하닉이 걸린 기록 수 − 태그가 붙은 기록 수.
-    function bonusNameFor(base) {
-        const mine = cachedRankings.filter(r => r.name === base || String(r.name || '').startsWith(`${base} (한번더`));
-        const won = mine.filter(r => String(r.scoreText || '').includes('하닉')).length;
-        const used = mine.filter(r => r.name !== base).length; // 태그가 붙은 기록 = 쓴 보너스
-        return (won > used && used < 5) ? `${base} (한번더${used ? used + 1 : ''})` : null;
-    }
 
     const requestSpin = (name) =>
         fetch(`${GAS_URL}?action=spin&name=${encodeURIComponent(name)}`, { cache: 'no-store' }).then(r => r.json());
@@ -577,13 +566,6 @@
         try {
             let data = await requestSpin(userName);
 
-            // 🎁 "이미 참여했습니다" 회피: 남은 보너스가 있으면 태그 키로 재요청
-            if (!data.success) {
-                await loadRankings();
-                const bonusName = bonusNameFor(baseName);
-                if (bonusName) data = await requestSpin(userName = bonusName);
-            }
-
             loading.style.display = 'none';
 
             if (!data.success) {
@@ -613,14 +595,14 @@
                 // 💡 수정된 부분: 숫자가 아니면 빈칸('')을 출력하도록 변경하고 줄바꿈(\n\n)을 추가했습니다.
                 let msgnotion = isNaN(parseInt(data.score)) ? '' : `\n\n룰렛 대상자가 맞다면 노션태그: 노름꾼 ${data.score}점으로 등록‼️`;
                 
-                // 🎁 한번더는 쓰는 아이템이 아니라 다시 돌릴 권리라 아이템 안내에서 제외
-                const isRespin = slices[winningIndex].name === "하닉오르면한번더~!";
-                const isItemWin = !!slices[winningIndex].lines && !isRespin; //[cite: 1]
+                // 🎲 랜덤게임은 쓰는 아이템이 아니라 이벤트팀을 부르는 거라 아이템 안내에서 제외
+                const isRandomGame = slices[winningIndex].name === "랜덤게임~!";
+                const isItemWin = !!slices[winningIndex].lines && !isRandomGame; //[cite: 1]
                 const noticeText = isItemWin ? '\n\n📌 뽑은 아이템은 본방에 공유하고 즉시 사용 필수!' : ''; //[cite: 1]
-                const respinText = isRespin ? '\n\n🎁 하닉이 올려줬다!! 오늘 [돌리기!] 를 한 번 더 누를 수 있어요.' : '';
+                const randomGameText = isRandomGame ? '\n\n🎲 랜덤게임! 이벤트팀을 불러보세요' : '';
 
                 // 알림창 띄우기
-                alert(`🎉 축하합니다! [${userName}]님, ${msgScore} 당첨!${noticeText}${respinText}${msgnotion}`);
+                alert(`🎉 축하합니다! [${userName}]님, ${msgScore} 당첨!${noticeText}${randomGameText}${msgnotion}`);
                 
                 loadRankings(); //[cite: 1]
                 isSpinning = false; //[cite: 1]
