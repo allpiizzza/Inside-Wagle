@@ -18,6 +18,12 @@ const chongdaeProp = (m, i) => `${m}월 총대 (${i})`; // 괄호 앞 공백 주
 const EXEMPTION_FROM = { point: '2026 포인트 면제권', received: '받았어요 면제권' };
 const EXEMPTION_USED = '사용했어요 면제권';
 
+// 저장 후 "2026 포인트"가 30점 이상이면 30점마다 "2026 포인트 면제권 N"을 자동 발급
+// (수식이 이 면제권 1장당 30점을 빼므로, 발급하면 포인트는 다시 30점 아래로 내려감)
+const AUTO_EXEMPTION_POINTS = 30;
+const AUTO_EXEMPTION_PREFIX = '2026 포인트 면제권';
+const AUTO_EXEMPTION_RE = /^2026 포인트 면제권 (\d+)$/; // "2026 상반기 포인트 면제권 N"은 제외
+
 function setCors(res) {
     res.setHeader('Access-Control-Allow-Origin', ALLOWED_ORIGIN);
     res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
@@ -159,7 +165,7 @@ export default async function handler(req, res) {
             });
         }
 
-        // ---------- 한 달치 기록 저장 (보낸 상태 그대로 덮어씀 → 끄면 삭제) ----------
+        // ---------- 면제권 사용 ("사용했어요 면제권"으로 이동) ----------
         if (req.method === 'POST' && req.body?.action === 'useExemption') {
             const { name, ticket, from } = req.body;
             const srcProp = EXEMPTION_FROM[from];
@@ -198,6 +204,7 @@ export default async function handler(req, res) {
             });
         }
 
+        // ---------- 한 달치 기록 저장 (보낸 상태 그대로 덮어씀 → 끄면 삭제) ----------
         if (req.method === 'POST') {
             const { name, month, offline, online, activity, chongdae } = req.body || {};
             const m = parseInt(month, 10);
@@ -239,9 +246,37 @@ export default async function handler(req, res) {
                 headers,
                 body: JSON.stringify({ properties }),
             });
-            const data = await response.json();
+            let data = await response.json();
             if (!response.ok) {
                 return res.status(response.status).json({ error: data.message || 'Notion 저장 실패' });
+            }
+
+            // ---------- 30점 넘으면 면제권 자동 발급 ----------
+            const issued = [];
+            const point = formulaValue(data.properties?.['2026 포인트']);
+            const count = typeof point === 'number' ? Math.floor(point / AUTO_EXEMPTION_POINTS) : 0;
+            if (count > 0) {
+                const owned = selectedNames(data.properties[EXEMPTION_FROM.point]);
+                // 번호는 "사용했어요 면제권" + "2026 포인트 면제권"을 합쳐서 가장 큰 번호 다음부터
+                const maxNo = [...owned, ...selectedNames(data.properties[EXEMPTION_USED])]
+                    .map((v) => parseInt(v.match(AUTO_EXEMPTION_RE)?.[1] ?? '0', 10))
+                    .reduce((a, b) => Math.max(a, b), 0);
+                for (let i = 1; i <= count; i++) issued.push(`${AUTO_EXEMPTION_PREFIX} ${maxNo + i}`);
+
+                const issueRes = await fetch(`https://api.notion.com/v1/pages/${page.id}`, {
+                    method: 'PATCH',
+                    headers,
+                    body: JSON.stringify({
+                        properties: {
+                            [EXEMPTION_FROM.point]: { multi_select: [...owned, ...issued].map((v) => ({ name: v })) },
+                        },
+                    }),
+                });
+                const issueData = await issueRes.json();
+                if (!issueRes.ok) {
+                    return res.status(issueRes.status).json({ error: `기록은 저장됐지만 면제권 발급에 실패했어요: ${issueData.message || ''}` });
+                }
+                data = issueData;
             }
 
             return res.status(200).json({
@@ -249,6 +284,8 @@ export default async function handler(req, res) {
                 month: m,
                 point: formulaValue(data.properties?.['2026 포인트']),
                 record: buildMonth(schema, data.properties, m),
+                exemptions: buildExemptions(data.properties),
+                issued,
             });
         }
 

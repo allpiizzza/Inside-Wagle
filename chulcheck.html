@@ -703,8 +703,11 @@
 
             record.months[m] = data.record;
             draft[m] = structuredClone(data.record);
+            if (data.exemptions) record.exemptions = data.exemptions;
             renderPoint(data.point);
-            setStatus(`${m}월 기록 저장 완료 ✅`, 'ok');
+            setStatus(data.issued?.length
+                ? `${m}월 기록 저장 완료 ✅ 30점 달성! 🎫 ${data.issued.join(', ')} 발급됐어요`
+                : `${m}월 기록 저장 완료 ✅`, 'ok');
         } catch (err) {
             setStatus(err.message, 'error');
         } finally {
