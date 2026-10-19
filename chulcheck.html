@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>출석체크 - 인사이드 와글</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #fdfbf7;
+            color: #37352f;
+            padding: 15px;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 20px;
+        }
+        .card {
+            background: #ffffff;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            border: 1px solid #edece9;
+            width: 100%;
+            max-width: 420px;
+            box-sizing: border-box;
+        }
+        h3 {
+            margin-top: 0;
+            margin-bottom: 5px;
+            text-align: center;
+            font-size: 16px;
+            color: #222;
+        }
+        .subtitle {
+            font-size: 12px;
+            color: #888;
+            text-align: center;
+            margin-bottom: 18px;
+        }
+        .back-link {
+            font-size: 12px;
+            color: #888;
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 4px;
+        }
+        .field { margin-bottom: 14px; }
+        .field label {
+            display: block;
+            font-size: 12px;
+            font-weight: 700;
+            color: #555;
+            margin-bottom: 6px;
+        }
+        .field select {
+            width: 100%;
+            border: 1.5px solid #edece9;
+            border-radius: 8px;
+            padding: 9px 10px;
+            font-size: 14px;
+            font-family: inherit;
+            color: #222;
+            box-sizing: border-box;
+            background: #fff;
+        }
+        .field select:focus {
+            outline: none;
+            border-color: #ff7f32;
+        }
+
+        .point {
+            font-size: 12px;
+            color: #888;
+            text-align: center;
+            margin-bottom: 12px;
+        }
+        .point b { color: #ff7f32; font-size: 14px; }
+
+        /* 월 탭 */
+        .month-tabs {
+            display: grid;
+            grid-template-columns: 1.5fr repeat(6, 1fr);
+            gap: 5px;
+            margin-bottom: 18px;
+        }
+        .month-tab {
+            padding: 8px 0;
+            border: 1.5px solid #edece9;
+            border-radius: 8px;
+            background: #fff;
+            font-size: 13px;
+            font-weight: 700;
+            color: #888;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .month-tab.active { background: #ff7f32; border-color: #ff7f32; color: #fff; }
+        .month-tab.dirty::after { content: ' •'; color: #e15b64; }
+        .month-tab.active.dirty::after { color: #fff; }
+
+        /* 면제권 */
+        .ticket {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding: 9px 10px;
+            border: 1.5px solid #edece9;
+            border-radius: 10px;
+            margin-bottom: 6px;
+            font-size: 13px;
+            font-weight: 600;
+            color: #444;
+        }
+        .ticket .from { display: block; font-size: 11px; font-weight: 500; color: #aaa; margin-top: 2px; }
+        .ticket-use {
+            flex-shrink: 0;
+            padding: 6px 10px;
+            border: none;
+            border-radius: 8px;
+            background: #ff7f32;
+            color: #fff;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            font-family: inherit;
+        }
+        .ticket-use:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* 항목 섹션 */
+        .section { margin-bottom: 18px; }
+        .section-head {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            font-size: 12px;
+            font-weight: 700;
+            color: #555;
+            margin-bottom: 8px;
+        }
+        .section-head .count { color: #ff7f32; font-weight: 700; }
+        .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+        .chip {
+            padding: 6px 10px;
+            border: 1.5px solid #edece9;
+            border-radius: 999px;
+            background: #fff;
+            font-size: 12px;
+            font-weight: 600;
+            color: #666;
+            cursor: pointer;
+            font-family: inherit;
+            transition: background 0.1s, color 0.1s, border-color 0.1s;
+        }
+        .chip.on { background: #ff7f32; border-color: #ff7f32; color: #fff; }
+        .empty { font-size: 12px; color: #bbb; }
+
+        .btn {
+            width: 100%;
+            padding: 12px;
+            border: none;
+            border-radius: 10px;
+            font-size: 14px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            background: #ff7f32;
+            color: #fff;
+        }
+        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .status-msg {
+            font-size: 12px;
+            color: #aaa;
+            text-align: center;
+            padding: 8px 0;
+        }
+        .status-msg.error { color: #c0392b; }
+        .status-msg.ok { color: #2c7a2c; }
+    </style>
+    <script src="/js/common.js"></script>
+</head>
+<body>
+
+<div class="card">
+    <a class="back-link" href="https://for-wagle.vercel.app/">← 메인으로</a>
+    <h3>✅ 출석체크</h3>
+    <div class="subtitle">이번 달에 한 활동을 골라서 저장해요. 누르면 켜지고, 다시 누르면 꺼져요</div>
+
+    <div class="field">
+        <label>와글러 이름</label>
+        <select id="cName" onchange="loadRecord()">
+            <option value="" disabled selected>명단 불러오는 중...</option>
+        </select>
+    </div>
+
+    <div id="recordArea" style="display:none;">
+        <div class="point" id="cPoint"></div>
+        <div class="month-tabs" id="monthTabs"></div>
+        <div id="sections"></div>
+
+        <button id="cSaveBtn" class="btn" onclick="saveMonth()">저장하기 ✅</button>
+    </div>
+    <div id="cStatus" class="status-msg"></div>
+</div>
+
+<script>
+    const API_CHULCHECK = '/api/chulcheck';
+    const MONTHS = [7, 8, 9, 10, 11, 12];
+    const SECTIONS = [
+        { key: 'offline', label: '🏠 오프라인 프로 포인트' },
+        { key: 'online', label: '💻 온라인 프로 포인트' },
+        { key: 'activity', label: '🌟 활동 포인트' },
+    ];
+
+    let record = null;   // 서버에서 받은 원본 (저장 성공 시 갱신)
+    let draft = null;    // 화면에서 고치는 중인 값
+    let currentMonth = defaultMonth(); // 'ex'면 면제권 탭
+    const EXEMPTION_FROM_LABEL = { point: '2026 포인트 면제권', received: '받았어요 면제권' };
+
+    function defaultMonth() {
+        const m = new Date().getMonth() + 1;
+        return Math.min(Math.max(m, MONTHS[0]), MONTHS[MONTHS.length - 1]);
+    }
+
+    function setStatus(msg, type) {
+        const status = document.getElementById('cStatus');
+        status.className = 'status-msg' + (type ? ' ' + type : '');
+        status.innerText = msg || '';
+    }
+
+    function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    // ---------- 명단 ----------
+    async function loadNames() {
+        const select = document.getElementById('cName');
+        try {
+            const response = await fetch(API_CHULCHECK);
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || '명단 불러오기 실패');
+
+            select.innerHTML = '<option value="" disabled selected>이름을 선택하세요</option>' +
+                data.names.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
+
+            // 저장된 이름이 있으면 자동으로 채워줌 (/js/common.js)
+            const savedName = Wagle.saved.getName();
+            if (data.names.includes(savedName)) {
+                select.value = savedName;
+                loadRecord();
+            }
+        } catch (err) {
+            select.innerHTML = '<option value="" disabled selected>명단을 불러오지 못했어요</option>';
+            setStatus(err.message, 'error');
+        }
+    }
+
+    // ---------- 한 사람의 7~12월 기록 전체 ----------
+    async function loadRecord() {
+        const name = document.getElementById('cName').value;
+        if (!name) return;
+        if (draft && MONTHS.some(isDirty) && !confirm('저장하지 않은 변경사항이 있어요. 다른 사람으로 바꿀까요?')) {
+            document.getElementById('cName').value = record.name;
+            return;
+        }
+
+        document.getElementById('recordArea').style.display = 'none';
+        setStatus('기록 불러오는 중...');
+        try {
+            const response = await fetch(`${API_CHULCHECK}?${new URLSearchParams({ name })}`);
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || '불러오기 실패');
+
+            record = data;
+            draft = structuredClone(data.months);
+            renderPoint(data.point);
+            document.getElementById('recordArea').style.display = '';
+            setStatus('');
+            render();
+        } catch (err) {
+            setStatus(err.message, 'error');
+        }
+    }
+
+    function renderPoint(point) {
+        document.getElementById('cPoint').innerHTML =
+            point == null ? '' : `2026 포인트 <b>${Number(point).toLocaleString()}</b>점`;
+    }
+
+    // 원본과 비교해서 바뀐 달인지 (선택 순서는 무시)
+    function snapshot(month) {
+        return JSON.stringify(SECTIONS.map(({ key }) => month[key] ? [...month[key].selected].sort() : null)
+            .concat([month.chongdae]));
+    }
+    function isDirty(m) {
+        return snapshot(draft[m]) !== snapshot(record.months[m]);
+    }
+
+    // ---------- 화면 그리기 ----------
+    function render() {
+        document.getElementById('monthTabs').innerHTML =
+            `<button class="month-tab${currentMonth === 'ex' ? ' active' : ''}" onclick="selectMonth('ex')">🎫 면제권</button>` +
+            MONTHS.map(m => `
+            <button class="month-tab${m === currentMonth ? ' active' : ''}${isDirty(m) ? ' dirty' : ''}"
+                    onclick="selectMonth(${m})">${m}월</button>`).join('');
+
+        const saveBtn = document.getElementById('cSaveBtn');
+        if (currentMonth === 'ex') {
+            document.getElementById('sections').innerHTML = renderExemptions();
+            saveBtn.style.display = 'none';
+            return;
+        }
+        saveBtn.style.display = '';
+
+        const month = draft[currentMonth];
+        let html = SECTIONS.map(({ key, label }) => {
+            const sec = month[key];
+            if (!sec) return '';
+            const chips = sec.options.length
+                ? sec.options.map((opt, i) => `
+                    <button class="chip${sec.selected.includes(opt) ? ' on' : ''}"
+                            onclick="toggleOption('${key}', ${i})">${escapeHtml(opt)}</button>`).join('')
+                : '<span class="empty">선택할 수 있는 항목이 없어요</span>';
+            return `
+                <div class="section">
+                    <div class="section-head"><span>${label}</span><span class="count">${sec.selected.length}개</span></div>
+                    <div class="chips">${chips}</div>
+                </div>`;
+        }).join('');
+
+        if (month.chongdae.some(v => v !== null)) {
+            html += `
+                <div class="section">
+                    <div class="section-head"><span>🚩 총대</span><span class="count">${month.chongdae.filter(Boolean).length}회</span></div>
+                    <div class="chips">${month.chongdae.map((v, i) => v === null ? '' : `
+                        <button class="chip${v ? ' on' : ''}" onclick="toggleChongdae(${i})">총대 (${i + 1})</button>`).join('')}
+                    </div>
+                </div>`;
+        }
+
+        document.getElementById('sections').innerHTML = html;
+        saveBtn.disabled = !isDirty(currentMonth);
+    }
+
+    function renderExemptions() {
+        const { owned } = record.exemptions;
+        const ownedHtml = owned.length
+            ? owned.map((t, i) => `
+                <div class="ticket">
+                    <span>${escapeHtml(t.name)}<span class="from">${EXEMPTION_FROM_LABEL[t.from]}</span></span>
+                    <button class="ticket-use" onclick="useExemption(${i}, this)">사용</button>
+                </div>`).join('')
+            : '<span class="empty">사용할 수 있는 면제권이 없어요</span>';
+        return `
+            <div class="section">
+                <div class="section-head"><span>🎫 가지고 있는 면제권</span><span class="count">${owned.length}개</span></div>
+                ${ownedHtml}
+            </div>`;
+    }
+
+    // ---------- 면제권 사용 (바로 저장, "사용했어요 면제권"으로 이동) ----------
+    async function useExemption(i, btn) {
+        const ticket = record.exemptions.owned[i];
+        if (!confirm(`'${ticket.name}'을(를) 사용할까요?\n사용하면 "사용했어요 면제권"으로 옮겨져요.`)) return;
+
+        document.querySelectorAll('.ticket-use').forEach(b => { b.disabled = true; });
+        btn.innerText = '사용 중...';
+        setStatus('');
+        try {
+            const response = await fetch(API_CHULCHECK, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'useExemption', name: record.name, ticket: ticket.name, from: ticket.from }),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || '사용 실패');
+
+            Wagle.saved.save('', record.name);
+            record.exemptions = data.exemptions;
+            renderPoint(data.point);
+            setStatus(`'${ticket.name}' 사용 완료 ✅`, 'ok');
+        } catch (err) {
+            setStatus(err.message, 'error');
+        } finally {
+            render();
+        }
+    }
+
+    function selectMonth(m) {
+        currentMonth = m;
+        setStatus('');
+        render();
+    }
+
+    function toggleOption(key, i) {
+        const sec = draft[currentMonth][key];
+        const opt = sec.options[i];
+        sec.selected = sec.selected.includes(opt)
+            ? sec.selected.filter(v => v !== opt)
+            : [...sec.selected, opt];
+        render();
+    }
+
+    function toggleChongdae(i) {
+        const arr = draft[currentMonth].chongdae;
+        arr[i] = !arr[i];
+        render();
+    }
+
+    // ---------- 저장 (선택한 달만) ----------
+    async function saveMonth() {
+        const name = record.name;
+        const m = currentMonth;
+        const month = draft[m];
+        const btn = document.getElementById('cSaveBtn');
+
+        btn.disabled = true;
+        btn.innerText = '저장 중...';
+        setStatus('');
+
+        try {
+            const response = await fetch(API_CHULCHECK, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    name,
+                    month: m,
+                    offline: month.offline?.selected,
+                    online: month.online?.selected,
+                    activity: month.activity?.selected,
+                    chongdae: month.chongdae,
+                }),
+            });
+            const data = await response.json();
+            if (!response.ok) throw new Error(data.error || '저장 실패');
+
+            Wagle.saved.save('', name);
+
+            record.months[m] = data.record;
+            draft[m] = structuredClone(data.record);
+            renderPoint(data.point);
+            setStatus(`${m}월 기록 저장 완료 ✅`, 'ok');
+        } catch (err) {
+            setStatus(err.message, 'error');
+        } finally {
+            btn.innerText = '저장하기 ✅';
+            render();
+        }
+    }
+
+    window.addEventListener('beforeunload', (e) => {
+        if (draft && MONTHS.some(isDirty)) e.preventDefault();
+    });
+
+    loadNames();
+</script>
+
+</body>
+</html>
