@@ -202,6 +202,7 @@
         .theme-불끈이 { border-color: var(--anger-main); background-color: var(--anger-bg); }
         .badge-불끈이 { background-color: var(--anger-main); }
     </style>
+    <script src="/js/common.js"></script>
 </head>
 <body>
 
@@ -376,6 +377,15 @@
         { chance: 1 / MONTHLY, name: "📱 [빙봉에게 카톡하기] 획득!" }           // 월 1회 (이벤트팀 준비 필요)
     ];
 
+    // 저장된 닉네임이 있으면 자동으로 채워줌 (/js/common.js)
+    function restoreSavedMember() {
+        const savedName = Wagle.saved.getName();
+        const select = document.getElementById('memberSelect');
+        if (savedName && [...select.options].some(o => o.value === savedName)) {
+            select.value = savedName;
+        }
+    }
+
     // 1. 운세 데이터 가져오기 (Notion DB → /api/fortune)
     async function loadFortuneData() {
         const btn = document.getElementById('fortuneBtn');
@@ -423,6 +433,9 @@
         }
 
         const memberInfo = members[selectedMember];
+
+        // 운세를 뽑은 팀/닉네임을 저장해두고 다음 방문 때 자동으로 채워줌 (/js/common.js)
+        Wagle.saved.save(`${memberInfo.team}팀`, selectedMember);
 
         // 오늘 날짜 가져오기 (KST 기준, 위와 동일한 헬퍼 사용)
         const today = getKstDateParts().isoDate;
@@ -549,6 +562,7 @@
     // 창이 로드될 때 데이터 불러오기
     // 스크립트는 body 맨 아래에 있어 이 시점에 DOM은 이미 준비돼있음.
     // window.onload(이미지/폰트 등 모든 리소스 로딩 완료)까지 기다리지 않고 바로 데이터 요청 시작.
+    restoreSavedMember();
     loadFortuneData();
 </script>
 

@@ -295,6 +295,7 @@
             font-weight: 700;
         }
     </style>
+    <script src="/js/common.js"></script>
 </head>
 <body>
 
@@ -419,14 +420,11 @@
     playDateInput.value = new Date().toLocaleDateString('sv-SE');
 
     // 이름 목록은 fortuneteller.html과 동일하게 하드코딩 (API 호출 없음)
-    const savedName = localStorage.getItem('rouletteUserName');
-    if (savedName) {
+    // 저장된 이름이 있으면 자동으로 채워줌 (/js/common.js)
+    const savedName = Wagle.saved.getName();
+    if (savedName && [...userNameInput.options].some(o => o.value === savedName)) {
         userNameInput.value = savedName;
     }
-
-    userNameInput.addEventListener('change', (e) => {
-        localStorage.setItem('rouletteUserName', e.target.value);
-    });
 
     const slices = [
         { name: "💎 300", weight: 4, color1: "#ff0844", color2: "#ffb199" },
@@ -574,6 +572,10 @@
                 spinBtn.disabled = false;
                 return;
             }
+
+            // 팀은 optgroup 라벨("💛 생글이팀")에서 꺼내서 다른 페이지 형식("생글이팀")에 맞춤
+            const teamLabel = userNameInput.selectedOptions[0].parentElement.label || '';
+            Wagle.saved.save(teamLabel.split(' ').pop(), rawName);
 
             const winningIndex = data.winningIndex;
             const baseSpins = 360 * 5;

@@ -152,6 +152,7 @@
         }
         .month-table td.val { text-align: right; color: #6c5ce7; font-weight: 700; }
     </style>
+    <script src="/js/common.js"></script>
 </head>
 <body>
 
@@ -208,6 +209,16 @@
 
     let waglerList = [];
 
+    // 저장된 팀이 있으면 자동으로 채워줌 (/js/common.js)
+    function restoreSavedTeam() {
+        const team = Wagle.saved.getTeam();
+        const select = document.getElementById('fTeam');
+        if (team && [...select.options].some(o => o.value === team)) {
+            select.value = team;
+            renderWaglerOptions();
+        }
+    }
+
     // ---------- 팀 -> 와글러 필터링 (다른 페이지들과 동일한 패턴) ----------
     async function loadWaglerList() {
         try {
@@ -234,8 +245,11 @@
         const members = waglerList.filter(w => w.team === team);
         select.innerHTML = '<option value="" disabled selected>이름을 선택하세요</option>' +
             members.map(w => `<option value="${w.name}">${w.name}</option>`).join('');
+        const savedName = Wagle.saved.getName();
         if (!members.length) {
             select.innerHTML = '<option value="" disabled selected>불러오는 중...</option>';
+        } else if (members.some(w => w.name === savedName)) {
+            select.value = savedName;
         }
     }
 
@@ -350,6 +364,8 @@
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || '기록 실패');
 
+            Wagle.saved.save(team, name);
+
             status.className = 'status-msg ok';
             status.innerText = `${data.month} +${data.added} → 현재 ${data.newValue}회 ✅`;
 
@@ -404,6 +420,7 @@
 
     renderHourGrid();
     setupHourGridEvents();
+    restoreSavedTeam();
     loadWaglerList();
 </script>
 

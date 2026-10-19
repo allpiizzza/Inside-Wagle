@@ -259,6 +259,7 @@
         .board-msg { font-size: 12px; color: #aaa; text-align: center; padding: 8px 0; }
         .board-msg.error { color: #c0392b; }
     </style>
+    <script src="/js/common.js"></script>
 </head>
 <body>
 
@@ -483,6 +484,19 @@
         }
     }
 
+    // "10월 1주차 (1~4)" 형식에서 오늘 날짜가 괄호 안 범위에 들어가는 주차를 찾음
+    function findCurrentWeek(weeks) {
+        const today = new Date();
+        const month = today.getMonth() + 1;
+        const day = today.getDate();
+        return weeks.find(w => {
+            const match = w.match(/(\d+)월.*\(\s*(\d+)\s*~\s*(\d+)\s*\)/);
+            if (!match) return false;
+            const [, m, start, end] = match.map(Number);
+            return m === month && day >= start && day <= end;
+        });
+    }
+
     async function loadWeeks() {
         const select = document.getElementById('qWeek');
         try {
@@ -491,6 +505,8 @@
             if (!response.ok) throw new Error(weeks.error || '불러오기 실패');
             select.innerHTML = '<option value="" disabled selected>주차를 선택하세요</option>' +
                 weeks.map(w => `<option value="${w}">${w}</option>`).join('');
+            const current = findCurrentWeek(weeks);
+            if (current) select.value = current;
         } catch (err) {
             select.innerHTML = '<option value="" disabled selected>불러오기 실패. 조금 있다가 다시 시도해주세요</option>';
         }
@@ -527,6 +543,8 @@
             });
             const data = await response.json();
             if (!response.ok) throw new Error(data.error || '호출에 실패했어요.');
+
+            Wagle.saved.save(team, name);
 
             if (data.alreadyExists) {
                 status.className = 'status-msg';
@@ -589,6 +607,16 @@
 
     let waglerList = []; // [{id, name, team}]
 
+    // 저장된 팀이 있으면 자동으로 채워줌 (/js/common.js)
+    function restoreSavedTeam() {
+        const team = Wagle.saved.getTeam();
+        const select = document.getElementById('qTeam');
+        if (team && [...select.options].some(o => o.value === team)) {
+            select.value = team;
+            renderWaglerOptions();
+        }
+    }
+
     async function loadWaglerList() {
         try {
             const response = await fetch('/api/waglerList');
@@ -616,8 +644,11 @@
         select.innerHTML = '<option value="" disabled selected>이름을 선택하세요</option>' +
             members.map(w => `<option value="${w.name}">${w.name}</option>`).join('');
 
+        const savedName = Wagle.saved.getName();
         if (!members.length) {
             select.innerHTML = '<option value="" disabled selected>불러오는 중...</option>';
+        } else if (members.some(w => w.name === savedName)) {
+            select.value = savedName;
         } else if (isDesktopPointer()) {
             select.focus();
         }
@@ -676,6 +707,7 @@
     }
 
     setupQuestSearch();
+    restoreSavedTeam();
     loadActiveQuests();
     loadCatalog();
     loadWeeks();
