@@ -260,13 +260,13 @@
         .opt-group {
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 8px 12px;
+            gap: 8px;
+            padding: 8px 10px;
             border-top: 1px solid #f1f5f9;
         }
         .opt-groups > :first-child { border-top: none; }
         .opt-group .group-name {
-            flex: 0 0 38%;
+            flex: 0 0 64px; /* "비출첵모임" 한 줄 들어가는 폭 */
             min-width: 0;
             font-size: 0.82rem;
             font-weight: 600;
@@ -275,7 +275,9 @@
             word-break: keep-all;
         }
         .opt-group.has-on .group-name { color: #1d4ed8; font-weight: 700; }
-        .opt-group .chips { flex: 1; gap: 5px; }
+        /* 번호 버튼은 줄바꿈 없이 한 줄에: 폭이 모자라면 버튼이 조금씩 줄어듦 */
+        .opt-group .chips { flex: 1; min-width: 0; gap: 4px; flex-wrap: nowrap; }
+        .opt-group .chip.mini { flex: 1 1 0; min-width: 0; max-width: 36px; }
         .chip.mini {
             min-width: 34px;
             padding: 6px 0;
@@ -375,6 +377,16 @@
 
         @media (prefers-reduced-motion: reduce) {
             .hero-icon { animation: none; }
+        }
+
+        /* 폰: 바깥 여백을 줄여서 월 탭·항목 줄에 폭을 더 줌 */
+        @media (max-width: 480px) {
+            body { padding: 12px; }
+            .hero { padding-left: 18px; padding-right: 18px; }
+            .content { padding-left: 14px; padding-right: 14px; }
+            .section.box { padding-left: 12px; padding-right: 12px; }
+            .month-tabs { gap: 2px; padding: 3px; }
+            .month-tab { padding: 9px 0; font-size: 0.78rem; letter-spacing: -0.02em; }
         }
     </style>
     <script src="/js/common.js"></script>
