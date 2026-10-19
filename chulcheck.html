@@ -4,205 +4,410 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>출석체크 - 인사이드 와글</title>
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
     <style>
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: #fdfbf7;
-            color: #37352f;
-            padding: 15px;
-            margin: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 20px;
-        }
-        .card {
-            background: #ffffff;
-            border-radius: 16px;
-            padding: 24px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-            border: 1px solid #edece9;
-            width: 100%;
-            max-width: 420px;
+        /* For Wagle(https://for-wagle.vercel.app/) 메인과 같은 톤 */
+        * {
             box-sizing: border-box;
+            font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
         }
-        h3 {
-            margin-top: 0;
-            margin-bottom: 5px;
-            text-align: center;
-            font-size: 16px;
-            color: #222;
+        body {
+            background-color: #f1f5f9;
+            background-image:
+                radial-gradient(circle at 15% 10%, rgba(59, 130, 246, 0.18) 0, transparent 40%),
+                radial-gradient(circle at 90% 85%, rgba(16, 185, 129, 0.15) 0, transparent 40%),
+                radial-gradient(circle at 85% 15%, rgba(251, 146, 60, 0.12) 0, transparent 35%);
+            background-attachment: fixed;
+            color: #1e293b;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            -webkit-tap-highlight-color: transparent;
         }
-        .subtitle {
-            font-size: 12px;
-            color: #888;
-            text-align: center;
-            margin-bottom: 18px;
+        .container {
+            background-color: #ffffff;
+            width: 100%;
+            max-width: 450px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+
+        /* 헤더 배너 */
+        .hero {
+            position: relative;
+            padding: 18px 25px 30px;
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 55%, #60a5fa 100%);
+            color: #ffffff;
+            overflow: hidden;
+        }
+        .hero::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: -1px;
+            height: 22px;
+            background: #ffffff;
+            border-radius: 50% 50% 0 0 / 100% 100% 0 0;
         }
         .back-link {
-            font-size: 12px;
-            color: #888;
-            text-decoration: none;
+            position: relative;
+            z-index: 1;
             display: inline-block;
-            margin-bottom: 4px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.85);
+            text-decoration: none;
+            margin-bottom: 10px;
         }
-        .field { margin-bottom: 14px; }
-        .field label {
-            display: block;
-            font-size: 12px;
+        .back-link:hover { color: #ffffff; }
+        .hero-icon {
+            font-size: 2rem;
+            display: inline-block;
+            animation: bob 2.4s ease-in-out infinite;
+        }
+        @keyframes bob {
+            0%, 100% { transform: translateY(0) rotate(0); }
+            50% { transform: translateY(-4px) rotate(-6deg); }
+        }
+        .hero h1 {
+            margin: 4px 0 4px;
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+        .hero p {
+            margin: 0;
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+        .bubble {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15);
+        }
+        .bubble.b1 { width: 120px; height: 120px; top: -40px; right: -30px; }
+        .bubble.b2 { width: 60px; height: 60px; top: 50px; right: 70px; }
+        .bubble.b3 { width: 24px; height: 24px; top: 24px; right: 150px; }
+
+        .content { padding: 8px 25px 22px; }
+        .section-label {
+            font-size: 0.78rem;
             font-weight: 700;
-            color: #555;
-            margin-bottom: 6px;
+            color: #94a3b8;
+            letter-spacing: 0.04em;
+            margin: 18px 2px 10px;
         }
-        .field select {
+        .content > .section-label:first-child { margin-top: 4px; }
+
+        select {
             width: 100%;
-            border: 1.5px solid #edece9;
-            border-radius: 8px;
-            padding: 9px 10px;
-            font-size: 14px;
-            font-family: inherit;
-            color: #222;
-            box-sizing: border-box;
-            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 12px 14px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: #1e293b;
+            background: #f8fafc;
+            appearance: none;
+            -webkit-appearance: none;
+            background-image: linear-gradient(45deg, transparent 50%, #94a3b8 50%), linear-gradient(135deg, #94a3b8 50%, transparent 50%);
+            background-position: calc(100% - 20px) 50%, calc(100% - 15px) 50%;
+            background-size: 5px 5px;
+            background-repeat: no-repeat;
+            transition: border-color 0.15s, box-shadow 0.15s;
         }
-        .field select:focus {
+        select:focus {
             outline: none;
-            border-color: #ff7f32;
+            border-color: #3b82f6;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
         }
 
-        .point {
-            font-size: 12px;
-            color: #888;
-            text-align: center;
-            margin-bottom: 12px;
+        /* 포인트 카드: 왼쪽 2026 포인트 / 오른쪽 남은 면제권 (50:50) */
+        .point-card {
+            display: flex;
+            margin-top: 12px;
+            padding: 12px 0;
+            background: #eff6ff;
+            border: 1px solid #dbeafe;
+            border-radius: 14px;
         }
-        .point b { color: #ff7f32; font-size: 14px; }
+        .point-card:empty { display: none; }
+        .point-card .stat {
+            flex: 1 1 0;
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0 14px;
+            border: none;
+            background: none;
+            text-align: left;
+            font: inherit;
+        }
+        .point-card .stat + .stat { border-left: 1px solid #bfdbfe; }
+        .point-card .icon {
+            flex-shrink: 0;
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            background: #dbeafe;
+        }
+        .point-card .label { display: block; font-size: 0.76rem; color: #60a5fa; font-weight: 600; white-space: nowrap; }
+        .point-card .value { display: block; font-size: 1.35rem; font-weight: 800; color: #1d4ed8; letter-spacing: -0.02em; }
+        .point-card .value small { font-size: 0.8rem; font-weight: 700; margin-left: 2px; }
+        /* 남은 면제권 (누르면 면제권 탭으로) */
+        .point-card .ex-stat { cursor: pointer; }
+        .point-card .ex-stat .icon { background: #fef3c7; }
+        .point-card .ex-stat .value { color: #b45309; }
+        .point-card .ex-stat .label { color: #d97706; }
 
-        /* 월 탭 */
+        /* 월 탭 (세그먼트) */
         .month-tabs {
             display: grid;
             grid-template-columns: 1.5fr repeat(6, 1fr);
-            gap: 5px;
-            margin-bottom: 18px;
+            gap: 3px;
+            padding: 4px;
+            background: #f1f5f9;
+            border-radius: 12px;
         }
         .month-tab {
+            position: relative;
             padding: 8px 0;
-            border: 1.5px solid #edece9;
-            border-radius: 8px;
-            background: #fff;
-            font-size: 13px;
-            font-weight: 700;
-            color: #888;
-            cursor: pointer;
-            font-family: inherit;
-        }
-        .month-tab.active { background: #ff7f32; border-color: #ff7f32; color: #fff; }
-        .month-tab.dirty::after { content: ' •'; color: #e15b64; }
-        .month-tab.active.dirty::after { color: #fff; }
-
-        /* 면제권 */
-        .ticket {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 8px;
-            padding: 9px 10px;
-            border: 1.5px solid #edece9;
-            border-radius: 10px;
-            margin-bottom: 6px;
-            font-size: 13px;
-            font-weight: 600;
-            color: #444;
-        }
-        .ticket .from { display: block; font-size: 11px; font-weight: 500; color: #aaa; margin-top: 2px; }
-        .ticket-use {
-            flex-shrink: 0;
-            padding: 6px 10px;
             border: none;
-            border-radius: 8px;
-            background: #ff7f32;
-            color: #fff;
-            font-size: 12px;
+            border-radius: 9px;
+            background: transparent;
+            font-size: 0.82rem;
             font-weight: 700;
+            color: #64748b;
             cursor: pointer;
-            font-family: inherit;
+            transition: background-color 0.15s, color 0.15s, box-shadow 0.15s;
         }
-        .ticket-use:disabled { opacity: 0.5; cursor: not-allowed; }
+        .month-tab.active {
+            background: #ffffff;
+            color: #1d4ed8;
+            box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
+        }
+        .month-tab.dirty::after {
+            content: "";
+            position: absolute;
+            top: 4px;
+            right: 4px;
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #ef4444;
+        }
 
         /* 항목 섹션 */
-        .section { margin-bottom: 18px; }
         .section-head {
             display: flex;
             justify-content: space-between;
             align-items: baseline;
-            font-size: 12px;
+            font-size: 0.78rem;
             font-weight: 700;
-            color: #555;
+            color: #94a3b8;
+            letter-spacing: 0.04em;
+            margin: 20px 2px 10px;
+        }
+        /* 월 탭의 섹션(오프라인/온라인/활동/총대)은 각각 큰 네모로 한 번 더 묶음 */
+        .section.box {
+            margin-top: 14px;
+            padding: 14px 14px 16px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+        }
+        .section.box .section-head {
+            align-items: center;
+            margin: 0 0 14px;
+            font-size: 1rem;
+            font-weight: 800;
+            color: #1e293b;
+            letter-spacing: -0.01em;
+        }
+        .section.box .chip { background: #ffffff; font-size: 0.78rem; font-weight: 500; }
+        .section.box .chip.on { font-weight: 700; }
+        .section.box .opt-group .group-name { font-size: 0.78rem; }
+        .section.box .chip.on { background: #2563eb; }
+        .section.box .opt-groups { background: #ffffff; }
+        .section-head .count {
+            font-size: 0.72rem;
+            font-weight: 800;
+            color: #1d4ed8;
+            background: #dbeafe;
+            padding: 2px 8px;
+            border-radius: 999px;
+            letter-spacing: 0;
+        }
+        .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+
+        /* 단일 항목은 칩으로 위에, 책밥1~5·책추천 2명a~c처럼 이름이 같은 항목은 아래 상자에 한 줄씩 */
+        .chips + .opt-groups { margin-top: 10px; }
+        .opt-groups {
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            overflow: hidden;
+        }
+        .opt-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 12px;
+            border-top: 1px solid #f1f5f9;
+        }
+        .opt-groups > :first-child { border-top: none; }
+        .opt-group .group-name {
+            flex: 0 0 38%;
+            min-width: 0;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #475569;
+            line-height: 1.35;
+            word-break: keep-all;
+        }
+        .opt-group.has-on .group-name { color: #1d4ed8; font-weight: 700; }
+        .opt-group .chips { flex: 1; gap: 5px; }
+        .chip.mini {
+            min-width: 34px;
+            padding: 6px 0;
+            text-align: center;
+        }
+        .chip {
+            padding: 7px 12px;
+            border: 1px solid #e2e8f0;
+            border-radius: 999px;
+            background: #f8fafc;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #475569;
+            cursor: pointer;
+            transition: background-color 0.12s, color 0.12s, border-color 0.12s, transform 0.12s;
+        }
+        .chip:hover { border-color: #93c5fd; }
+        .chip:active { transform: scale(0.96); }
+        .chip.on {
+            background: #2563eb;
+            border-color: #2563eb;
+            color: #ffffff;
+        }
+        .empty { font-size: 0.8rem; color: #cbd5e1; }
+
+        /* 면제권 (For Wagle 링크 버튼 모양) */
+        .ticket {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 14px;
+            padding: 10px 12px 10px 14px;
             margin-bottom: 8px;
         }
-        .section-head .count { color: #ff7f32; font-weight: 700; }
-        .chips { display: flex; flex-wrap: wrap; gap: 6px; }
-        .chip {
-            padding: 6px 10px;
-            border: 1.5px solid #edece9;
-            border-radius: 999px;
-            background: #fff;
-            font-size: 12px;
-            font-weight: 600;
-            color: #666;
-            cursor: pointer;
-            font-family: inherit;
-            transition: background 0.1s, color 0.1s, border-color 0.1s;
+        .ticket .icon {
+            flex-shrink: 0;
+            width: 38px;
+            height: 38px;
+            border-radius: 11px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.15rem;
+            background: #fef3c7;
         }
-        .chip.on { background: #ff7f32; border-color: #ff7f32; color: #fff; }
-        .empty { font-size: 12px; color: #bbb; }
+        .ticket .text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+        .ticket .title { font-weight: 700; font-size: 0.9rem; color: #1e293b; line-height: 1.3; word-break: keep-all; }
+        .ticket .from { font-size: 0.74rem; color: #94a3b8; }
+        .ticket-use {
+            flex-shrink: 0;
+            padding: 7px 14px;
+            border: none;
+            border-radius: 10px;
+            background: #2563eb;
+            color: #fff;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color 0.15s;
+        }
+        .ticket-use:hover { background: #1d4ed8; }
+        .ticket-use:disabled { opacity: 0.5; cursor: not-allowed; }
 
         .btn {
             width: 100%;
-            padding: 12px;
+            margin-top: 22px;
+            padding: 14px;
             border: none;
-            border-radius: 10px;
-            font-size: 14px;
-            font-weight: bold;
+            border-radius: 14px;
+            font-size: 0.95rem;
+            font-weight: 800;
             cursor: pointer;
-            transition: opacity 0.2s;
-            background: #ff7f32;
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 100%);
             color: #fff;
+            box-shadow: 0 6px 16px rgba(37, 99, 235, 0.3);
+            transition: opacity 0.2s, transform 0.15s;
         }
-        .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn:active { transform: scale(0.98); }
+        .btn:disabled {
+            background: #e2e8f0;
+            color: #94a3b8;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
         .status-msg {
-            font-size: 12px;
-            color: #aaa;
+            font-size: 0.8rem;
+            color: #94a3b8;
             text-align: center;
-            padding: 8px 0;
+            padding: 10px 0 0;
+            min-height: 1px;
         }
-        .status-msg.error { color: #c0392b; }
-        .status-msg.ok { color: #2c7a2c; }
+        .status-msg:empty { padding: 0; }
+        .status-msg.error { color: #ef4444; }
+        .status-msg.ok { color: #10b981; font-weight: 700; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .hero-icon { animation: none; }
+        }
     </style>
     <script src="/js/common.js"></script>
 </head>
 <body>
 
-<div class="card">
-    <a class="back-link" href="https://for-wagle.vercel.app/">← 메인으로</a>
-    <h3>✅ 출석체크</h3>
-    <div class="subtitle">이번 달에 한 활동을 골라서 저장해요. 누르면 켜지고, 다시 누르면 꺼져요</div>
+<div class="container">
+    <header class="hero">
+        <span class="bubble b1"></span>
+        <span class="bubble b2"></span>
+        <span class="bubble b3"></span>
+        <a class="back-link" href="https://for-wagle.vercel.app/">← 메인으로</a><br>
+        <span class="hero-icon">✅</span>
+        <h1>출석체크</h1>
+    </header>
 
-    <div class="field">
-        <label>와글러 이름</label>
+    <main class="content">
+        <div class="section-label">🙋 와글러</div>
         <select id="cName" onchange="loadRecord()">
             <option value="" disabled selected>명단 불러오는 중...</option>
         </select>
-    </div>
 
-    <div id="recordArea" style="display:none;">
-        <div class="point" id="cPoint"></div>
-        <div class="month-tabs" id="monthTabs"></div>
-        <div id="sections"></div>
+        <div id="recordArea" style="display:none;">
+            <div class="point-card" id="cPoint"></div>
 
-        <button id="cSaveBtn" class="btn" onclick="saveMonth()">저장하기 ✅</button>
-    </div>
-    <div id="cStatus" class="status-msg"></div>
+            <div class="section-label">📅 월 선택</div>
+            <div class="month-tabs" id="monthTabs"></div>
+            <div id="sections"></div>
+
+            <button id="cSaveBtn" class="btn" onclick="saveMonth()">저장하기</button>
+        </div>
+        <div id="cStatus" class="status-msg"></div>
+    </main>
 </div>
 
 <script>
@@ -285,8 +490,15 @@
     }
 
     function renderPoint(point) {
-        document.getElementById('cPoint').innerHTML =
-            point == null ? '' : `2026 포인트 <b>${Number(point).toLocaleString()}</b>점`;
+        document.getElementById('cPoint').innerHTML = point == null ? '' : `
+            <div class="stat">
+                <span class="icon">🏅</span>
+                <span><span class="label">2026 포인트</span><span class="value">${Number(point).toLocaleString()}<small>점</small></span></span>
+            </div>
+            <button class="stat ex-stat" onclick="selectMonth('ex')">
+                <span class="icon">🎫</span>
+                <span><span class="label">남은 면제권</span><span class="value">${record.exemptions.owned.length}<small>개</small></span></span>
+            </button>`;
     }
 
     // 원본과 비교해서 바뀐 달인지 (선택 순서는 무시)
@@ -318,24 +530,24 @@
         let html = SECTIONS.map(({ key, label }) => {
             const sec = month[key];
             if (!sec) return '';
-            const chips = sec.options.length
-                ? sec.options.map((opt, i) => `
-                    <button class="chip${sec.selected.includes(opt) ? ' on' : ''}"
-                            onclick="toggleOption('${key}', ${i})">${escapeHtml(opt)}</button>`).join('')
-                : '<span class="empty">선택할 수 있는 항목이 없어요</span>';
             return `
-                <div class="section">
+                <div class="section box">
                     <div class="section-head"><span>${label}</span><span class="count">${sec.selected.length}개</span></div>
-                    <div class="chips">${chips}</div>
+                    ${sec.options.length ? renderOptions(key, sec) : '<span class="empty">선택할 수 있는 항목이 없어요</span>'}
                 </div>`;
         }).join('');
 
         if (month.chongdae.some(v => v !== null)) {
             html += `
-                <div class="section">
+                <div class="section box">
                     <div class="section-head"><span>🚩 총대</span><span class="count">${month.chongdae.filter(Boolean).length}회</span></div>
-                    <div class="chips">${month.chongdae.map((v, i) => v === null ? '' : `
-                        <button class="chip${v ? ' on' : ''}" onclick="toggleChongdae(${i})">총대 (${i + 1})</button>`).join('')}
+                    <div class="opt-groups">
+                        <div class="opt-group${month.chongdae.some(Boolean) ? ' has-on' : ''}">
+                            <span class="group-name">총대</span>
+                            <div class="chips">${month.chongdae.map((v, i) => v === null ? '' : `
+                                <button class="chip mini${v ? ' on' : ''}" onclick="toggleChongdae(${i})">${i + 1}</button>`).join('')}
+                            </div>
+                        </div>
                     </div>
                 </div>`;
         }
@@ -344,12 +556,51 @@
         saveBtn.disabled = !isDirty(currentMonth);
     }
 
+    // "책밥3" → ["책밥", "3"], "책추천 2명a" → ["책추천 2명", "a"]
+    function splitOption(opt) {
+        const m = opt.match(/^(.*?\S)\s?(\d{1,2}|[a-z])$/);
+        return m ? [m[1], m[2]] : [opt, null];
+    }
+
+    // 단일 항목은 칩으로 먼저, 이름이 같은 항목이 2개 이상이면 아래 상자에 한 줄로 묶음
+    function renderOptions(key, sec) {
+        const groups = new Map();
+        sec.options.forEach((opt, i) => {
+            const [base, suffix] = splitOption(opt);
+            if (!groups.has(base)) groups.set(base, []);
+            groups.get(base).push({ opt, i, suffix });
+        });
+        const isOn = (it) => sec.selected.includes(it.opt);
+        const chip = (it, text, mini) => `
+            <button class="chip${mini ? ' mini' : ''}${isOn(it) ? ' on' : ''}"
+                    onclick="toggleOption('${key}', ${it.i})">${escapeHtml(text)}</button>`;
+
+        const singles = [];
+        const rows = [];
+        groups.forEach((items, base) => {
+            if (items.length < 2 || items.some(it => it.suffix === null)) {
+                items.forEach(it => singles.push(chip(it, it.opt)));
+                return;
+            }
+            items.sort((a, b) => a.suffix.localeCompare(b.suffix, 'ko', { numeric: true }));
+            rows.push(`
+                <div class="opt-group${items.some(isOn) ? ' has-on' : ''}">
+                    <span class="group-name">${escapeHtml(base)}</span>
+                    <div class="chips">${items.map(it => chip(it, it.suffix, true)).join('')}</div>
+                </div>`);
+        });
+
+        return (singles.length ? `<div class="chips">${singles.join('')}</div>` : '')
+            + (rows.length ? `<div class="opt-groups">${rows.join('')}</div>` : '');
+    }
+
     function renderExemptions() {
         const { owned } = record.exemptions;
         const ownedHtml = owned.length
             ? owned.map((t, i) => `
                 <div class="ticket">
-                    <span>${escapeHtml(t.name)}<span class="from">${EXEMPTION_FROM_LABEL[t.from]}</span></span>
+                    <span class="icon">🎫</span>
+                    <span class="text"><span class="title">${escapeHtml(t.name)}</span><span class="from">${EXEMPTION_FROM_LABEL[t.from]}</span></span>
                     <button class="ticket-use" onclick="useExemption(${i}, this)">사용</button>
                 </div>`).join('')
             : '<span class="empty">사용할 수 있는 면제권이 없어요</span>';
@@ -445,7 +696,7 @@
         } catch (err) {
             setStatus(err.message, 'error');
         } finally {
-            btn.innerText = '저장하기 ✅';
+            btn.innerText = '저장하기';
             render();
         }
     }
