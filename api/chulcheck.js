@@ -119,10 +119,10 @@ export default async function handler(req, res) {
     if (req.method === 'OPTIONS') return res.status(200).end();
 
     const NOTION_TOKEN = process.env.NOTION_TOKEN;
-    const CHULCHECK_DB_ID = process.env.NOTION_CHULCHECK_HABANGI_DB;
+    const CHULCHECK_DB_ID = process.env.NOTION_CHULCHECK_HABANGI_DB_ID;
 
     if (!NOTION_TOKEN || !CHULCHECK_DB_ID) {
-        return res.status(500).json({ error: '서버에 NOTION_TOKEN / NOTION_CHULCHECK_HABANGI_DB 환경변수가 설정되지 않았어요.' });
+        return res.status(500).json({ error: '서버에 NOTION_TOKEN / NOTION_CHULCHECK_HABANGI_DB_ID 환경변수가 설정되지 않았어요.' });
     }
 
     const headers = {
