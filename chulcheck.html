@@ -172,14 +172,15 @@
 
         /* 월 탭 (세그먼트) */
         .month-tabs {
-            display: grid;
-            grid-template-columns: 1.5fr repeat(6, 1fr);
+            /* 글자 폭 + 남는 폭을 똑같이 나눠 가져서, 탭마다 글자 양옆 여백이 같아짐 */
+            display: flex;
             gap: 3px;
             padding: 4px;
             background: #f1f5f9;
             border-radius: 12px;
         }
         .month-tab {
+            flex: 1 1 auto;
             position: relative;
             padding: 8px 0;
             border: none;
@@ -195,6 +196,12 @@
             background: #ffffff;
             color: #1d4ed8;
             box-shadow: 0 1px 4px rgba(15, 23, 42, 0.12);
+        }
+        /* 면제권 탭: 선택되면 면제권 아이콘과 같은 노란 톤 */
+        .month-tab.ex-tab.active {
+            background: #fef9e7;
+            color: #b45309;
+            box-shadow: 0 1px 4px rgba(180, 83, 9, 0.12);
         }
         .month-tab.dirty::after {
             content: "";
@@ -379,9 +386,8 @@
             .hero-icon { animation: none; }
         }
 
-        /* 폰: 바깥 여백을 줄여서 월 탭·항목 줄에 폭을 더 줌 */
+        /* 폰: 카드 크기는 메인과 동일하게 두고, 카드 안쪽 여백만 줄여서 월 탭·항목 줄에 폭을 더 줌 */
         @media (max-width: 480px) {
-            body { padding: 12px; }
             .hero { padding-left: 18px; padding-right: 18px; }
             .content { padding-left: 14px; padding-right: 14px; }
             .section.box { padding-left: 12px; padding-right: 12px; }
@@ -525,7 +531,7 @@
     // ---------- 화면 그리기 ----------
     function render() {
         document.getElementById('monthTabs').innerHTML =
-            `<button class="month-tab${currentMonth === 'ex' ? ' active' : ''}" onclick="selectMonth('ex')">🎫 면제권</button>` +
+            `<button class="month-tab ex-tab${currentMonth === 'ex' ? ' active' : ''}" onclick="selectMonth('ex')">면제권</button>` +
             MONTHS.map(m => `
             <button class="month-tab${m === currentMonth ? ' active' : ''}${isDirty(m) ? ' dirty' : ''}"
                     onclick="selectMonth(${m})">${m}월</button>`).join('');
