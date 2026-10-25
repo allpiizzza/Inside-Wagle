@@ -195,7 +195,7 @@
     <a class="back-link" href="https://for-wagle.vercel.app/">← For Wagle</a>
     <div class="topbar">
         <h1>The Wagle&rsquo;s Map</h1>
-        <p class="sub-ko">🗺️ 와글 도둑의 지도 · 서울 실제 위치</p>
+        <p class="sub-ko">나는 천하의 멍텅구리임을 엄숙하게 선언합니다</p>
         <p class="oath">&ldquo;I solemnly swear that I am up to no good&rdquo;</p>
     </div>
 
@@ -736,7 +736,7 @@ function showFatal(msg) {
     }
     // 타일 없음: 서울 중심으로 지리 좌표계만 사용
     map = L.map('map', { zoomControl: true, attributionControl: true }).setView([37.55, 126.99], 11);
-    map.attributionControl.addAttribution('역 좌표 ⓒ 공공데이터 · 도둑의 지도 테마');
+    map.attributionControl.addAttribution('역 좌표 ⓒ 공공데이터 · 마루더즈 지도 테마');
     geoLayer = L.layerGroup().addTo(map);
     lineLayer = L.layerGroup();            // 노선도: 기본 숨김(토글로 on)
     placeLayer = L.layerGroup().addTo(map); // 지명 오버레이: 기본 표시
