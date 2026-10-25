@@ -367,9 +367,11 @@ async function apiPost(payload) {
     const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ ...payload, token: WRITE_TOKEN }) });
     return res.json();
 }
+/* 이 지도에서 숨길 라벨 (목록·지도·필터 전부에서 제외). '디멘터'는 waglemap_2027.html 에서만 표시 */
+const HIDDEN_LABELS = new Set(['디멘터', '루모스']);
 async function reload() {
     const data = await apiGet();
-    RESIDENTS = data.residents || [];
+    RESIDENTS = (data.residents || []).filter(r => !HIDDEN_LABELS.has(String(r.label || '').trim()));
     NAMES = data.names || [];
     renderNames();
     renderLabelOptions();

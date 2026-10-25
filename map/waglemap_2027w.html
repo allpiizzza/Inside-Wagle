@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>와글 지도 — The Wagle's Map (Seoul)</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English+SC&family=IM+Fell+English:ital@0;1&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=East+Sea+Dokdo&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Diphylleia&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="subwayFallback.js"></script><!-- window.SUBWAY_FALLBACK (원본 fetch 실패 시 대비) -->
+    <style>
+        * { box-sizing: border-box; }
+        :root {
+            --ink: #3a2a18;
+            --ink-soft: #5f4a34;
+            --ink-faint: #8a7555;
+            --edge: #7a5c38;
+        }
+        body {
+            margin: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: var(--ink);
+            padding: 15px;
+            min-height: 100vh;
+            min-height: 100dvh;
+            background:
+                radial-gradient(ellipse at 50% 0%, rgba(60,38,15,0) 55%, rgba(60,38,15,.35) 100%),
+                radial-gradient(ellipse at 20% 15%, #e9d8b0 0%, #ddc99f 45%, #c6a975 100%);
+            background-attachment: fixed;
+        }
+
+        .app {
+            position: relative; z-index: 1; width: 100%; max-width: 920px; margin: 0 auto;
+            background: radial-gradient(ellipse at 30% 10%, #f3e7c6 0%, #e9d7ac 45%, #d8bd8c 100%);
+            border: 2px solid var(--edge); border-radius: 6px;
+            box-shadow: 0 0 0 7px #e9d7ac, 0 0 0 9px var(--edge),
+                inset 0 0 90px 24px rgba(90,60,25,.28), 0 24px 50px rgba(50,32,12,.45);
+            padding: 26px 24px;
+        }
+        .app::before {
+            content: ""; position: absolute; inset: 0; border-radius: 6px; pointer-events: none;
+            box-shadow: inset 0 0 70px 10px rgba(70,45,18,.35);
+            background:
+                radial-gradient(circle at 0 0, rgba(60,38,15,.5), transparent 16%),
+                radial-gradient(circle at 100% 0, rgba(60,38,15,.5), transparent 16%),
+                radial-gradient(circle at 0 100%, rgba(60,38,15,.5), transparent 16%),
+                radial-gradient(circle at 100% 100%, rgba(60,38,15,.5), transparent 16%);
+        }
+
+        .back-link { font-size: 12px; color: var(--ink-faint); text-decoration: none; display: inline-block; margin-bottom: 8px; font-weight: 700; letter-spacing: .3px; }
+        .back-link:hover { color: var(--ink); }
+
+        .topbar { margin-bottom: 18px; text-align: center; border-bottom: 2px double var(--edge); padding-bottom: 14px; }
+        .topbar h1 {
+            margin: 0 0 6px 0; font-size: 30px; font-weight: 400; letter-spacing: .5px;
+            font-family: "IM Fell English SC", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            color: var(--ink); text-shadow: 0 1px 0 rgba(255,250,235,.5);
+        }
+        .topbar .sub-ko { margin: 0 0 6px; font-size: 15px; color: var(--ink-soft); font-weight: 700; }
+        .topbar p { margin: 0; font-size: 12.5px; color: var(--ink-faint); font-weight: 700; line-height: 1.6; font-style: italic; }
+        .oath { font-family: "IM Fell English", serif; font-style: italic; }
+
+        .card { background: rgba(120, 85, 40, 0.10); border: 1.5px solid var(--edge); border-radius: 5px; padding: 16px; box-shadow: inset 0 0 30px rgba(90,60,25,.12); }
+        .card h2 { margin: 0 0 10px; font-size: 15px; color: var(--ink); font-weight: 800; }
+        .card h2 .muted { font-weight: 400; }
+
+        input, button, select { font-size: 14px; font-family: inherit; }
+        input, select { padding: 9px 11px; border: 1.5px solid var(--edge); border-radius: 4px; background: #f6ecd2; color: var(--ink); }
+        input:focus, select:focus { outline: none; border-color: var(--ink); box-shadow: 0 0 0 2px rgba(122,92,56,.3); }
+        button {
+            padding: 10px 18px; border: 1.5px solid var(--ink); border-radius: 4px; font-weight: 800; cursor: pointer;
+            background: linear-gradient(#6b5236, #4a371f); color: #f3e7c6; letter-spacing: .5px;
+            box-shadow: 0 3px 7px rgba(50,32,12,.4); transition: transform .15s ease;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+        button:active { transform: scale(0.97); }
+        button.sm { padding: 4px 10px; font-size: 12px; border-radius: 4px; background: #c9b083; color: var(--ink); box-shadow: none; border-color: var(--edge); }
+        button:disabled { background: #b7a888; color: #e9ddc2; box-shadow: none; cursor: default; border-color: #a2916e; }
+
+        .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-start; }
+        #rsPerson { flex: 0 1 130px; }
+        #rsLabel  { flex: 0 1 130px; }
+        .searchbox { position: relative; flex: 1 1 180px; }
+        .searchbox input { width: 100%; }
+        .dropdown {
+            position: absolute; left: 0; right: 0; top: 100%; z-index: 1000; background: #f6ecd2;
+            border: 1.5px solid var(--edge); border-radius: 0 0 4px 4px; max-height: 240px; overflow-y: auto;
+            box-shadow: 0 8px 20px rgba(50,32,12,.3); display: none;
+        }
+        .dropdown.open { display: block; }
+        .dropdown .opt { padding: 8px 10px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        .dropdown .opt:hover { background: #e9d7ac; }
+        .dot { width: 12px; height: 12px; border-radius: 50%; flex: none; display: inline-block; border: 1px solid rgba(58,42,24,.5); }
+        ul { list-style: none; margin: 0; padding: 0; }
+        .list-toggle { margin-top: 12px; display: inline-flex; align-items: center; gap: 8px; cursor: pointer;
+            font-size: 13px; font-weight: 800; color: var(--ink); user-select: none;
+            background: #d9c193; border: 1.5px solid var(--edge); border-radius: 4px; padding: 7px 12px; transition: background .15s ease; }
+        .list-toggle:hover { background: #cfb482; }
+        .list-toggle .chev { display: inline-flex; align-items: center; justify-content: center;
+            width: 18px; height: 18px; border-radius: 50%; background: var(--ink); color: #f3e7c6; font-size: 11px; line-height: 1; transition: transform .2s ease; }
+        .list-toggle.collapsed .chev { transform: rotate(-90deg); }
+        #rsList { max-height: 220px; overflow-y: auto; padding-right: 4px; margin-top: 8px; }
+        #rsList.collapsed { display: none; }
+        li { display: flex; align-items: center; gap: 8px; padding: 7px 2px; border-bottom: 1px solid rgba(122,92,56,.35); font-size: 14px; }
+        li .grow { flex: 1; }
+        .tag { font-size: 11px; background: #d9c193; color: var(--ink); padding: 1px 8px; border-radius: 10px; font-weight: 700; border: 1px solid var(--edge); }
+        .muted { color: var(--ink-faint); font-size: 13px; }
+        .err { color: #9b2d1f; font-weight: 700; }
+        .banner { background: #f5e2b8; border: 1.5px solid #b98a3c; color: #7a4e12; padding: 10px 12px; border-radius: 5px; margin-bottom: 14px; font-size: 13px; }
+        #status { font-size: 12px; color: var(--ink-faint); margin-top: 8px; font-style: italic; }
+
+        .label-filters { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 14px; }
+        .label-filters .lf-label { font-size: 12px; font-weight: 800; color: var(--ink); margin-right: 2px; }
+        #labelFilters { display: inline-flex; flex-wrap: wrap; gap: 6px; }
+        .lf-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px;
+            cursor: pointer; font-size: 12.5px; font-weight: 800; border: 1.5px solid var(--edge); user-select: none;
+            transition: transform .12s ease; background: #f6ecd2; color: var(--ink-faint); }
+        .lf-chip:active { transform: scale(0.96); }
+        .lf-chip .d { width: 10px; height: 10px; border-radius: 50%; }
+        .toggle-chip { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px;
+            cursor: pointer; font-size: 12.5px; font-weight: 800; border: 1.5px solid var(--edge); user-select: none;
+            background: #f6ecd2; color: var(--ink); }
+        .toggle-chip input { accent-color: var(--ink-soft); cursor: pointer; margin: 0; }
+
+        /* 지도: 타일 없음 → 양피지 종이 위에 잉크 레이어 */
+        #map {
+            width: 100%; height: 70vh; min-height: 460px; margin-top: 18px;
+            border-radius: 5px; overflow: hidden;
+            background: radial-gradient(ellipse at 38% 30%, #f3e6c4 0%, #e6d2a7 52%, #d2b78a 100%);
+            background-color: #e2cd9f;
+            position: relative; z-index: 0;
+            border: 2px solid var(--edge);
+            box-shadow: inset 0 0 40px rgba(70,45,18,.3);
+        }
+        /* (그레인·접힘·얼룩은 배경 이미지에 이미 포함 → 오버레이 제거) */
+        /* 컨테이너 가장자리만 살짝 어둡게 (이미지와 블렌드) */
+        #map::after {
+            content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 500; border-radius: inherit;
+            box-shadow: inset 0 0 70px 18px rgba(62,40,16,.28);
+        }
+        .leaflet-container { background: transparent; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+
+        .map-wrap { position: relative; }
+        .compass { position: absolute; right: 14px; bottom: 14px; z-index: 600; pointer-events: none;
+            width: 78px; height: 78px; opacity: .62; filter: drop-shadow(0 1px 2px rgba(60,40,20,.4)); }
+        @media (max-width: 600px) { .compass { width: 58px; height: 58px; right: 10px; bottom: 10px; } }
+
+        /* 디멘터 유령 / 해골 애니메이션 */
+        @keyframes wgfloat { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+        .wg-ghost { animation: wgfloat 2.6s ease-in-out infinite; opacity: .92; }
+        @keyframes wgbob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
+        .wg-skull { animation: wgbob 4s ease-in-out infinite; }
+        /* 이름 네모칸도 천천히 둥실 (위치 transform 유지하며 bob) */
+        @keyframes wgtagbob {
+            0%,100% { transform: translate(-50%,-100%) rotate(-1.6deg) translateY(0); }
+            50%     { transform: translate(-50%,-100%) rotate(-1.6deg) translateY(-4px); }
+        }
+        .wg-nametag { animation: wgtagbob 3.4s ease-in-out infinite; }
+
+        /* 강 이름 등 지도 주기(注記) */
+        .wg-geo-label { font-family: "IM Fell English", serif; font-style: italic; color: #4a6072; font-size: 15px;
+            font-weight: 400; white-space: nowrap; text-shadow: 0 1px 0 rgba(247,238,205,.6); }
+        /* 구 이름 (옅은 잉크 주기, 고풍 세리프) */
+        .wg-gu-label { transform: translate(-50%, -50%); color: #4a3620; opacity: .85; font-size: 13px; font-weight: 400;
+            font-family: "Diphylleia", serif; font-style: normal;
+            white-space: nowrap; letter-spacing: .3px;
+            text-shadow: 0 0 3px rgba(245,236,205,.9), 0 1px 0 rgba(245,236,205,.9), 0 -1px 0 rgba(245,236,205,.7); }
+
+        /* 역 이름 클릭 팝업(양피지) */
+        .wg-pop .leaflet-popup-content-wrapper { background: radial-gradient(ellipse at 30% 20%, #f8eecd 0%, #e6d2a4 100%); color: #3a2a18; border: 1.5px solid #4a4a4a; border-radius: 4px; box-shadow: 0 4px 12px rgba(50,32,12,.45); }
+        .wg-pop .leaflet-popup-content { margin: 7px 12px; font-weight: 800; font-size: 13px; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        .wg-pop .leaflet-popup-tip { background: #ecdcb2; border: 1.5px solid #4a4a4a; box-shadow: none; }
+
+        .footer-oath { text-align: center; margin-top: 16px; font-family: "IM Fell English", serif; font-style: italic; color: var(--ink-soft); font-size: 14px; letter-spacing: .4px; }
+
+        @media (max-width: 600px) {
+            body { padding: 8px; }
+            .app { padding: 16px 14px; }
+            .topbar h1 { font-size: 23px; }
+            .row { gap: 6px; }
+            #rsPerson, #rsLabel, .searchbox { flex: 1 1 100%; }
+            #rsPerson, #rsLabel, .searchbox input { width: 100%; }
+            #saveBtn { width: 100%; }
+            #map { height: 58vh; min-height: 320px; }
+            #rsList { max-height: 160px; }
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <a class="back-link" href="https://for-wagle.vercel.app/">← For Wagle</a>
+    <div class="topbar">
+        <h1>The Wagle&rsquo;s Map</h1>
+        <p class="sub-ko">🗺️ 와글 도둑의 지도 · 서울 실제 위치</p>
+        <p class="oath">&ldquo;I solemnly swear that I am up to no good&rdquo;</p>
+    </div>
+
+    <div id="setupBanner" class="banner" style="display:none"></div>
+
+    <div class="card">
+        <h2>등록 <span class="muted">이름 · 역 · 라벨 (기존 이름·라벨에 저장하면 덮어쓰기)</span></h2>
+        <div class="row">
+            <select id="rsPerson"><option value="">이름 선택</option></select>
+            <select id="rsLabel"><option value="">라벨 선택</option></select>
+            <div class="searchbox">
+                <input id="rsSearch" placeholder="역 이름 검색 (예: 강남)" autocomplete="off" oninput="onSearchInput()">
+                <div id="searchResults" class="dropdown"></div>
+            </div>
+            <button id="saveBtn" onclick="saveResident()" disabled>저장</button>
+        </div>
+        <span id="rsMsg" class="muted"></span>
+        <div class="list-toggle collapsed" id="listToggle" onclick="toggleList()">
+            <span class="chev">▾</span> 거주지 목록 <span id="listCount" class="muted"></span>
+        </div>
+        <ul id="rsList" class="collapsed"></ul>
+        <div id="status"></div>
+    </div>
+
+    <div class="label-filters">
+        <span class="lf-label">지도 표시</span>
+        <span id="labelFilters"></span>
+        <label class="toggle-chip"><input type="checkbox" id="lineToggle" onchange="toggleLines()"> 🚇 노선도</label>
+        <label class="toggle-chip"><input type="checkbox" id="placeToggle" checked onchange="togglePlaces()"> 🏷️ 지명</label>
+    </div>
+
+    <div class="map-wrap">
+        <div id="map"></div>
+    </div>
+
+    <div class="footer-oath">✦ Mischief Managed ✦</div>
+</div>
+
+<script>
+/* ============================================================
+   설정
+   ============================================================ */
+const API_URL     = 'https://script.google.com/macros/s/AKfycbw42FiGd05ufy8u7AgQnQrBSEAM5X6x-9nv7HnTSrdAH47L7jYJ29rSGpwcV7TgmXk2Aw/exec';
+const WRITE_TOKEN = 'wagle-write-token';
+
+/* 디멘터: 이름 박스 없이 둥둥 떠다니는 👻 로 표시하는 특수 라벨 */
+const DEMENTOR = '디멘터';
+const isDementor = l => String(l || '').trim() === DEMENTOR;
+
+/* 라벨별 색상(양피지 잉크 톤) */
+const LABEL_COLORS = { '집': '#a8742f', '직장': '#4f6d86', '루모스': '#F5EBB3', '디멘터': '#000000' };
+const LABEL_FALLBACK = ['#7d4a86', '#b06a1e', '#2f6d63', '#6d4c41', '#394b8a', '#2f6a7d', '#9b3a56', '#4d3a7d'];
+const labelColorMap = {};
+function labelColor(label) {
+    if (LABEL_COLORS[label]) return LABEL_COLORS[label];
+    if (!(label in labelColorMap)) labelColorMap[label] = LABEL_FALLBACK[Object.keys(labelColorMap).length % LABEL_FALLBACK.length];
+    return labelColorMap[label];
+}
+function textOn(hex) {
+    const c = hex.replace('#', '');
+    const r = parseInt(c.slice(0, 2), 16), g = parseInt(c.slice(2, 4), 16), b = parseInt(c.slice(4, 6), 16);
+    return (0.299 * r + 0.587 * g + 0.114 * b) / 255 > 0.62 ? '#1a1a1a' : '#fff';
+}
+
+const esc = s => String(s).replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+
+// 공공데이터 소스 (CORS 허용)
+const SUBWAY_CSV = 'https://raw.githubusercontent.com/kyckang/SeoulTransitMap_data/main/v1/seoul_subway_stations.csv';
+function parseSubwayCsv(text) {
+    const rows = text.trim().split(/\r?\n/).slice(1);
+    const out = [];
+    for (const row of rows) {
+        const c = row.split(',');
+        if (c.length < 9) continue;
+        const lat = Number(c[7]), lng = Number(c[8]);
+        if (!lat || !lng) continue;
+        out.push({ cd: Number(c[0]), line: c[1], name: c[3], lat, lng });
+    }
+    return out;
+}
+
+/* ============================================================
+   서울 지리 잉크 레이어 (양식화된 한강 / 서울 경계)
+   ── 손그림 마루더즈 맵 분위기용 근사 좌표입니다.
+   ============================================================ */
+const HAN_RIVER = [
+    [37.580,126.800],[37.575,126.835],[37.567,126.865],[37.558,126.888],
+    [37.549,126.908],[37.540,126.922],[37.527,126.925],[37.519,126.940],
+    [37.517,126.965],[37.512,126.992],[37.510,127.020],[37.512,127.050],
+    [37.517,127.078],[37.519,127.100],[37.527,127.120],[37.540,127.132],
+    [37.555,127.158]
+];
+const SEOUL_BOUNDARY = [
+    [37.600,126.850],[37.640,126.915],[37.690,126.980],[37.700,127.050],
+    [37.680,127.100],[37.640,127.145],[37.580,127.180],[37.520,127.165],
+    [37.490,127.140],[37.450,127.080],[37.440,127.010],[37.445,126.945],
+    [37.455,126.880],[37.470,126.830],[37.510,126.785],[37.555,126.775],
+    [37.585,126.790]
+];
+// 서울 25개 구 대략 중심점 → 보로노이 분할로 구 경계 "칸" 생성
+const GU_CENTROIDS = [
+    {name:'종로',lat:37.573,lng:126.979},{name:'중구',lat:37.564,lng:126.997},
+    {name:'용산',lat:37.532,lng:126.990},{name:'성동',lat:37.563,lng:127.037},
+    {name:'광진',lat:37.538,lng:127.082},{name:'동대문',lat:37.574,lng:127.040},
+    {name:'중랑',lat:37.606,lng:127.093},{name:'성북',lat:37.589,lng:127.017},
+    {name:'강북',lat:37.640,lng:127.012},{name:'도봉',lat:37.669,lng:127.047},
+    {name:'노원',lat:37.654,lng:127.056},{name:'은평',lat:37.603,lng:126.929},
+    {name:'서대문',lat:37.579,lng:126.937},{name:'마포',lat:37.566,lng:126.902},
+    {name:'양천',lat:37.517,lng:126.866},{name:'강서',lat:37.551,lng:126.850},
+    {name:'구로',lat:37.495,lng:126.887},{name:'금천',lat:37.457,lng:126.896},
+    {name:'영등포',lat:37.526,lng:126.896},{name:'동작',lat:37.512,lng:126.939},
+    {name:'관악',lat:37.478,lng:126.952},{name:'서초',lat:37.484,lng:127.033},
+    {name:'강남',lat:37.517,lng:127.047},{name:'송파',lat:37.515,lng:127.106},
+    {name:'강동',lat:37.530,lng:127.124}
+];
+// 경기·인천 주요 시 대략 중심점 (근사 칸)
+const GG_CENTROIDS = [
+    {name:'고양',lat:37.658,lng:126.832},{name:'파주',lat:37.760,lng:126.800},
+    {name:'김포',lat:37.615,lng:126.716},{name:'의정부',lat:37.738,lng:127.034},
+    {name:'양주',lat:37.785,lng:127.045},{name:'동두천',lat:37.885,lng:127.060},
+    {name:'포천',lat:37.870,lng:127.200},{name:'남양주',lat:37.636,lng:127.216},
+    {name:'구리',lat:37.594,lng:127.129},{name:'하남',lat:37.539,lng:127.215},
+    {name:'광주',lat:37.429,lng:127.255},{name:'성남',lat:37.420,lng:127.127},
+    {name:'용인',lat:37.241,lng:127.178},{name:'수원',lat:37.263,lng:127.029},
+    {name:'화성',lat:37.199,lng:126.831},{name:'오산',lat:37.150,lng:127.077},
+    {name:'평택',lat:37.010,lng:127.113},{name:'안성',lat:37.030,lng:127.270},
+    {name:'의왕',lat:37.345,lng:126.968},{name:'군포',lat:37.361,lng:126.935},
+    {name:'안양',lat:37.394,lng:126.957},{name:'과천',lat:37.429,lng:126.988},
+    {name:'광명',lat:37.478,lng:126.864},{name:'시흥',lat:37.380,lng:126.803},
+    {name:'안산',lat:37.322,lng:126.831},{name:'부천',lat:37.503,lng:126.766},
+    {name:'인천',lat:37.456,lng:126.705},{name:'부평',lat:37.507,lng:126.721},
+    {name:'서구',lat:37.545,lng:126.676}
+];
+const ALL_SITES = GU_CENTROIDS.concat(GG_CENTROIDS);
+// 수도권 외곽 경계 (근사) — 모든 중심점을 포함하도록 넉넉하게
+const METRO_BOUNDARY = [
+    [38.00,126.98],[37.95,127.22],[37.78,127.40],[37.50,127.44],
+    [37.22,127.40],[36.98,127.28],[36.90,127.05],[36.95,126.82],
+    [37.12,126.66],[37.38,126.58],[37.62,126.60],[37.82,126.68],[37.94,126.80]
+];
+const GU_DASH = '4,4'; // 구/시 경계 점선 스타일 (선택지는 아래 주석 참고)
+// 선택지: '' 실선 · '1,4' 촘촘한 점선 · '4,4' 짧은대시 · '8,5' 긴대시 · '8,4,1,4' 대시-점
+
+/* ============================================================
+   D안: 배경 이미지(마루더즈맵 PNG) 설정
+   - 이미지를 map/ 에 올리면 그림 배경으로, 없으면 벡터 배경으로 자동 폴백.
+   - IMG_BOUNDS = 이미지가 담는 실제 지리 범위(Web Mercator 기준). 이 범위대로 이미지를 제작해야 라벨이 정확히 맞음.
+   ============================================================ */
+const IMG_URL = 'maraudersmap_seoul.png';                 // map/ 에 올릴 배경 파일명
+const IMG_BOUNDS = [[37.05, 126.55], [37.85, 127.45]];    // [[남위,서경],[북위,동경]]
+
+// 반평면 클리핑(Sutherland-Hodgman): A 에 더 가까운 쪽만 남김
+function clipHalfPlane(poly, A, B) {
+    const mx = (A[0] + B[0]) / 2, my = (A[1] + B[1]) / 2, dx = B[0] - A[0], dy = B[1] - A[1];
+    const f = p => dx * (p[0] - mx) + dy * (p[1] - my); // <=0 이면 A 쪽(내부)
+    const out = [];
+    for (let i = 0; i < poly.length; i++) {
+        const cur = poly[i], nxt = poly[(i + 1) % poly.length];
+        const fc = f(cur), fn = f(nxt);
+        if (fc <= 0) out.push(cur);
+        if ((fc < 0 && fn > 0) || (fc > 0 && fn < 0)) {
+            const t = fc / (fc - fn);
+            out.push([cur[0] + t * (nxt[0] - cur[0]), cur[1] + t * (nxt[1] - cur[1])]);
+        }
+    }
+    return out;
+}
+// 중심점들의 보로노이 셀을 서울 경계 안에서 계산 (라이브러리 없이 O(n²))
+function voronoiCells(sites, boundary) {
+    const k = Math.cos(37.56 * Math.PI / 180);       // 경도 왜곡 보정
+    const P = ll => [ll.lng * k, ll.lat];            // [lat,lng]→평면[x,y]
+    const U = xy => [xy[1], xy[0] / k];              // 평면→[lat,lng]
+    const bnd = boundary.map(([lat, lng]) => [lng * k, lat]);
+    const S = sites.map(s => ({ name: s.name, p: P(s) }));
+    const cells = [];
+    for (let i = 0; i < S.length; i++) {
+        let poly = bnd.slice();
+        for (let j = 0; j < S.length && poly.length >= 3; j++) {
+            if (i !== j) poly = clipHalfPlane(poly, S[i].p, S[j].p);
+        }
+        if (poly.length >= 3) cells.push({ name: S[i].name, poly: poly.map(U), center: [sites[i].lat, sites[i].lng] });
+    }
+    return cells;
+}
+
+/* ============================================================
+   상태
+   ============================================================ */
+let map = null, geoLayer = null, lineLayer = null, placeLayer = null, residentLayer = null;
+let STATIONS = [];
+let RESIDENTS = [];
+let NAMES = [];
+let fitted = false;
+const stationByName = {};
+
+/* ============================================================
+   노선도 라인 (토글로 on/off) — 세피아 잉크 톤
+   ============================================================ */
+const LINE_META = {
+    L1:'#0052A4',L2:'#00A84D',L3:'#EF7C1C',L4:'#00A5DE',L5:'#996CAC',L6:'#CD7C2F',
+    L7:'#747F00',L8:'#E6186C',L9:'#BDB092',AREX:'#0090D2',SUINBUNDANG:'#FABE00',
+    GYEONGUI:'#77C4A3',GYEONGCHUN:'#0C8E72',SINBUNDANG:'#D4003B',INCHEON1:'#7CA8D5',
+    INCHEON2:'#ED8B00',SEOHAE:'#81A914',UIJEONGBU:'#FDA600',EVERLINE:'#509F22',
+    UISINSEOL:'#B7C452',GYEONGGANG:'#003DA5',SILLIM:'#6789CA',GIMPO:'#AD8605',GTXA:'#9A6292'
+};
+// 원색 → 세피아 잉크 톤 (채도↓ 명도↓ + 갈색 블렌드), SVG 노선색 톤다운과 동일 감성
+function toneHex(hex) {
+    const c = hex.replace('#', '');
+    let r = parseInt(c.slice(0, 2), 16) / 255, g = parseInt(c.slice(2, 4), 16) / 255, b = parseInt(c.slice(4, 6), 16) / 255;
+    const mx = Math.max(r, g, b), mn = Math.min(r, g, b); let h = 0, s = 0, l = (mx + mn) / 2;
+    if (mx !== mn) { const d = mx - mn; s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+        h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4; h /= 6; }
+    s *= 0.5; l = 0.30 + l * 0.18;
+    const hue = (p, q, t) => { if (t < 0) t += 1; if (t > 1) t -= 1; if (t < 1/6) return p + (q - p) * 6 * t; if (t < 1/2) return q; if (t < 2/3) return p + (q - p) * (2/3 - t) * 6; return p; };
+    let r2, g2, b2;
+    if (s === 0) { r2 = g2 = b2 = l; } else { const q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q; r2 = hue(p, q, h + 1/3); g2 = hue(p, q, h); b2 = hue(p, q, h - 1/3); }
+    r2 = r2 * 0.82 + 0.290 * 0.18; g2 = g2 * 0.82 + 0.216 * 0.18; b2 = b2 * 0.82 + 0.157 * 0.18;
+    const H = x => ('0' + Math.round(x * 255).toString(16)).slice(-2);
+    return '#' + H(r2) + H(g2) + H(b2);
+}
+function drawLines() {
+    lineLayer.clearLayers();
+    const byLine = {};
+    STATIONS.forEach(s => { (byLine[s.line] = byLine[s.line] || []).push(s); });
+    Object.entries(byLine).forEach(([line, list]) => {
+        if (list.length < 2) return;
+        list.sort((a, b) => a.cd - b.cd); // station_cd = 실제 노선 순서
+        const col = toneHex(LINE_META[line] || '#888888');
+        L.polyline(list.map(s => [s.lat, s.lng]), { color: col, weight: 2, opacity: .7, lineJoin: 'round', interactive: false }).addTo(lineLayer);
+    });
+}
+function toggleLines() {
+    const on = document.getElementById('lineToggle').checked;
+    if (on) { if (!map.hasLayer(lineLayer)) lineLayer.addTo(map); }
+    else { if (map.hasLayer(lineLayer)) map.removeLayer(lineLayer); }
+}
+
+/* 배경 이미지 제작 사양(Web Mercator 비율) 안내 */
+function logImageSpec() {
+    const S = IMG_BOUNDS[0][0], W = IMG_BOUNDS[0][1], N = IMG_BOUNDS[1][0], E = IMG_BOUNDS[1][1];
+    const mercY = lat => Math.log(Math.tan(Math.PI / 4 + lat * Math.PI / 360));
+    const dx = (E - W) * Math.PI / 180, dy = mercY(N) - mercY(S);
+    const ratio = dx / dy; // 가로/세로
+    const w = 2400, h = Math.round(w / ratio);
+    console.log(
+        `%c[마루더즈맵 배경 이미지 제작 사양]`, 'font-weight:bold',
+        `\n· 지리 범위(Web Mercator): 서경 ${W} ~ 동경 ${E}, 남위 ${S} ~ 북위 ${N}` +
+        `\n· 권장 가로:세로 비율 = ${ratio.toFixed(4)} : 1  (예: ${w} × ${h} px)` +
+        `\n· 이 범위/비율로 이미지를 만들어 map/${IMG_URL} 로 저장하세요.`
+    );
+}
+
+/* 지명 오버레이 (구/시 이름) — 이미지·벡터 모드 모두에서 선명한 HTML 한글 라벨 */
+function drawPlaceNames() {
+    placeLayer.clearLayers();
+    ALL_SITES.forEach(s => {
+        L.marker([s.lat, s.lng], {
+            icon: L.divIcon({ className: '', html: `<div class="wg-gu-label">${s.name}</div>`, iconSize: [0, 0] }),
+            interactive: false, zIndexOffset: -2000
+        }).addTo(placeLayer);
+    });
+}
+function togglePlaces() {
+    const on = document.getElementById('placeToggle').checked;
+    if (on) { if (!map.hasLayer(placeLayer)) placeLayer.addTo(map); }
+    else { if (map.hasLayer(placeLayer)) map.removeLayer(placeLayer); }
+}
+
+/* 지리 잉크 레이어 그리기 */
+function drawGeo() {
+    geoLayer.clearLayers();
+    // 수도권 외곽 경계 (옅은 잉크)
+    L.polygon(METRO_BOUNDARY, {
+        color: '#5a4426', weight: 1.4, opacity: .4, dashArray: GU_DASH,
+        fill: true, fillColor: '#8a6a3a', fillOpacity: 0.04, interactive: false
+    }).addTo(geoLayer);
+    // 구/시 경계 칸 — 서울 25구 + 경기·인천 주요시 중심점 보로노이 분할(근사)
+    const cells = voronoiCells(ALL_SITES, METRO_BOUNDARY);
+    cells.forEach(c => {
+        L.polygon(c.poly, {
+            color: '#3f3120', weight: 1.1, opacity: .62, dashArray: GU_DASH,
+            fill: false, interactive: false
+        }).addTo(geoLayer);
+        // 지명은 별도 placeLayer(지명 오버레이)에서 그림
+    });
+    // 서울시 경계 강조 (더 진한 외곽선)
+    L.polygon(SEOUL_BOUNDARY, {
+        color: '#2f2414', weight: 2, opacity: .7, fill: false, interactive: false
+    }).addTo(geoLayer);
+    // 한강 — 다른 선과 같은 잉크색 (넓은 물줄기 + 중심선, 굵기 유지)
+    L.polyline(HAN_RIVER, { color: '#3f3120', weight: 9, opacity: .45, lineJoin: 'round', lineCap: 'round', interactive: false }).addTo(geoLayer);
+    L.polyline(HAN_RIVER, { color: '#3f3120', weight: 2.4, opacity: .8, lineJoin: 'round', lineCap: 'round', interactive: false }).addTo(geoLayer);
+}
+
+/* ============================================================
+   거주지 라벨 (이름만)
+   ============================================================ */
+function coordsOf(r) {
+    if (r.lat && r.lng) return [r.lat, r.lng];
+    const s = stationByName[r.station];
+    return s ? [s.lat, s.lng] : null;
+}
+
+let RESIDENT_GROUPS = [];
+const activeLabels = new Set(['집', '루모스', '디멘터']); // 기본 ON (직장 OFF)
+
+function buildGroups() {
+    const byPos = {};
+    RESIDENTS.forEach(r => {
+        if (!activeLabels.has(r.label)) return;
+        const pos = coordsOf(r);
+        if (!pos) return;
+        const key = pos[0].toFixed(5) + ',' + pos[1].toFixed(5);
+        (byPos[key] = byPos[key] || { pos, entries: [] }).entries.push(r);
+    });
+    RESIDENT_GROUPS = Object.values(byPos);
+}
+
+function normalEntries(g) { return g.entries.filter(e => !isDementor(e.label)); }
+function groupLines(g)  { return [...new Set(normalEntries(g).map(r => r.person))]; }
+function groupColor(g)  {
+    const labels = new Set(normalEntries(g).map(e => e.label));
+    return labels.size === 1 ? labelColor([...labels][0]) : '#6e4f23';
+}
+
+function footHtml(color, fs) {
+    const s = Math.max(12, Math.round(fs * 1.1));
+    return `<div style="position:absolute;transform:translate(-50%,-50%);font-size:${s}px;line-height:1;
+        filter:grayscale(1) sepia(1) saturate(4) hue-rotate(-18deg) brightness(.55) drop-shadow(0 1px 1px rgba(60,40,20,.5));">👣</div>`;
+}
+function ghostHtml(fs, skull) {
+    const s = Math.max(16, Math.round(fs * 1.6));
+    return `<div style="position:absolute;transform:translate(-50%,-50%)">
+        ${skull || ''}<span class="wg-ghost" style="display:inline-block;cursor:pointer;font-size:${s}px;line-height:1;
+            filter:drop-shadow(0 2px 3px rgba(40,30,20,.5));">👻</span></div>`;
+}
+function fullIcon(color, lines, hasGhost, fs) {
+    const padY = Math.max(1, Math.round(fs * 0.16)), padX = padY + 4;
+    const skullSize = Math.max(11, Math.round(fs * 0.95));
+    const skull = hasGhost ? `<div style="position:absolute;bottom:100%;left:50%;transform:translateX(-50%);cursor:pointer">
+            <span class="wg-skull" style="display:inline-block;font-size:${skullSize}px;line-height:1;
+                filter:drop-shadow(0 1px 1px rgba(40,30,20,.55))">💀</span></div>` : '';
+    const names = lines.map(l => `<div>${l}</div>`).join('');
+    const delay = ((lines.join('').length % 10) * 0.23).toFixed(2); // 라벨마다 살짝 비동기
+    const box = lines.length ? `<div class="wg-nametag" style="position:absolute;transform:translate(-50%,-100%) rotate(-1.6deg);margin-top:-12px;cursor:pointer;animation-delay:${delay}s;
+            background:radial-gradient(ellipse at 32% 18%, #f8eecd 0%, #ecdcb2 55%, #ddc99b 100%);color:#3a2a18;
+            padding:${padY}px ${padX}px;border:1.2px solid #111;border-left:3px solid ${color};
+            border-radius:255px 14px 225px 14px / 16px 225px 16px 240px;
+            font-family:'East Sea Dokdo',sans-serif;font-weight:400;font-size:${Math.round(fs * 1.5)}px;white-space:nowrap;line-height:1.15;
+            box-shadow:0 2px 6px rgba(60,40,20,.5), inset 0 0 14px rgba(120,85,40,.22);
+            text-shadow:0 1px 0 rgba(255,250,235,.45)">${skull}${names}</div>` : '';
+    const marker = hasGhost ? ghostHtml(fs, lines.length ? '' : skull) : footHtml(color, fs);
+    const html = `<div style="position:relative">${box}${marker}</div>`;
+    return L.divIcon({ html, iconSize: [0, 0], iconAnchor: [0, 0], className: '' });
+}
+
+// 줌에 따른 기본 폰트 (지리 지도용)
+function baseFontForZoom() {
+    const z = Math.max(7, Math.min(15, map.getZoom()));
+    return 9 + (z - 7) * (20 - 9) / (15 - 7);
+}
+function relayout() {
+    if (!residentLayer || !map) return;
+    residentLayer.clearLayers();
+    const fs = baseFontForZoom(); // 전체 라벨 균일 크기 (줌 작아지면 다같이 작아짐)
+    RESIDENT_GROUPS.forEach(g => {
+        const hasGhost = g.entries.some(e => isDementor(e.label));
+        const lines = groupLines(g);
+        const color = groupColor(g);
+        const station = [...new Set(g.entries.map(e => e.station))].join(', ');
+        const m = L.marker(g.pos, { icon: fullIcon(color, lines, hasGhost, fs), zIndexOffset: hasGhost ? 100000 : 1000 });
+        m.bindPopup(`<span class="wg-pop-name">📍 ${station}</span>`, { className: 'wg-pop', closeButton: false, offset: [0, -4] });
+        m.addTo(residentLayer);
+    });
+}
+
+function drawResidents() {
+    buildGroups();
+    if (!fitted) {
+        const points = RESIDENT_GROUPS.map(g => g.pos);
+        if (points.length) { map.fitBounds(L.latLngBounds(points), { padding: [60, 60], maxZoom: 14 }); fitted = true; }
+    }
+    relayout();
+}
+
+function renderList() {
+    document.getElementById('rsList').innerHTML = RESIDENTS.map(r => {
+        const ok = !!coordsOf(r);
+        return `<li>
+            <span class="dot" style="background:${labelColor(r.label)}"></span>
+            <span class="grow"><b>${r.person}</b> <span class="tag">${r.label}</span> ${r.station}
+                ${ok ? '' : '<span class="err">(좌표 없음)</span>'}</span>
+            <button class="sm" onclick="delResident('${esc(r.person)}','${esc(r.label)}')">삭제</button>
+        </li>`;
+    }).join('');
+    document.getElementById('listCount').textContent = RESIDENTS.length ? `(${RESIDENTS.length})` : '';
+}
+function toggleList() {
+    const collapsed = document.getElementById('rsList').classList.toggle('collapsed');
+    document.getElementById('listToggle').classList.toggle('collapsed', collapsed);
+}
+
+function renderNames() {
+    const sel = document.getElementById('rsPerson');
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">이름 선택</option>' + NAMES.map(n => `<option value="${n}">${n}</option>`).join('');
+    if (NAMES.includes(cur)) sel.value = cur;
+}
+
+// 라벨 선택 목록은 정해진 것만 노출
+const DEFAULT_LABELS = ['집', '직장', '루모스'];
+function renderLabelOptions() {
+    const sel = document.getElementById('rsLabel');
+    const cur = sel.value;
+    sel.innerHTML = '<option value="">라벨 선택</option>' + DEFAULT_LABELS.map(l => `<option value="${l}">${l}</option>`).join('');
+    if (DEFAULT_LABELS.includes(cur)) sel.value = cur;
+}
+
+// 라벨 표시 on/off 칩
+function renderLabelFilters() {
+    const labels = [...new Set(RESIDENTS.map(r => r.label).filter(Boolean))];
+    const rank = l => (l === '집' ? 0 : l === '직장' ? 1 : l === '루모스' ? 2 : 3);
+    labels.sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+    document.getElementById('labelFilters').innerHTML = labels.map(l => {
+        const on = activeLabels.has(l), c = labelColor(l);
+        const style = on ? `background:${c};color:${textOn(c)};border-color:transparent;` : 'background:#f6ecd2;color:#8a7555;';
+        const dot = on ? '' : `<span class="d" style="background:${c}"></span>`;
+        return `<span class="lf-chip ${on ? 'on' : ''}" style="${style}" onclick="toggleLabel('${esc(l)}')">${dot}${l}</span>`;
+    }).join('');
+}
+function toggleLabel(l) {
+    if (activeLabels.has(l)) activeLabels.delete(l); else activeLabels.add(l);
+    renderLabelFilters();
+    drawResidents();
+}
+
+/* ============================================================
+   역 검색 자동완성
+   ============================================================ */
+let pickedStation = null;
+function onSearchInput() {
+    const q = document.getElementById('rsSearch').value.trim();
+    const box = document.getElementById('searchResults');
+    pickedStation = null;
+    syncSaveBtn();
+    if (!q) { box.className = 'dropdown'; box.innerHTML = ''; return; }
+    const seen = {};
+    for (const s of STATIONS) {
+        if (s.name.indexOf(q) === -1) continue;
+        (seen[s.name] = seen[s.name] || new Set()).add(s.line);
+        if (Object.keys(seen).length >= 40) break;
+    }
+    const names = Object.keys(seen);
+    if (!names.length) { box.innerHTML = '<div class="opt muted">검색 결과 없음</div>'; box.className = 'dropdown open'; return; }
+    box.innerHTML = names.map(name => `<div class="opt" onclick="pick('${esc(name)}')">${name}</div>`).join('');
+    box.className = 'dropdown open';
+}
+function pick(name) {
+    const s = stationByName[name];
+    pickedStation = s ? { name, lat: s.lat, lng: s.lng } : { name };
+    document.getElementById('rsSearch').value = name;
+    const box = document.getElementById('searchResults');
+    box.className = 'dropdown'; box.innerHTML = '';
+    syncSaveBtn();
+}
+function syncSaveBtn() {
+    const person = document.getElementById('rsPerson').value.trim();
+    const label = document.getElementById('rsLabel').value.trim();
+    document.getElementById('saveBtn').disabled = !(person && pickedStation && label);
+}
+document.getElementById('rsPerson').addEventListener('change', syncSaveBtn);
+document.getElementById('rsLabel').addEventListener('change', syncSaveBtn);
+
+/* ============================================================
+   서버 통신
+   ============================================================ */
+async function apiGet() {
+    let res, text;
+    try { res = await fetch(API_URL); }
+    catch (e) { throw new Error('네트워크/CORS 차단으로 응답을 못 받았습니다 (' + e.message + ')'); }
+    text = await res.text();
+    let data;
+    try { data = JSON.parse(text); }
+    catch (e) { throw new Error('JSON 이 아닌 응답 (상태 ' + res.status + '). 앞부분: ' + text.slice(0, 150)); }
+    if (!data.ok) throw new Error(data.error || '로드 실패');
+    return data;
+}
+async function apiPost(payload) {
+    const res = await fetch(API_URL, { method: 'POST', body: JSON.stringify({ ...payload, token: WRITE_TOKEN }) });
+    return res.json();
+}
+async function reload() {
+    const data = await apiGet();
+    RESIDENTS = data.residents || [];
+    NAMES = data.names || [];
+    renderNames();
+    renderLabelOptions();
+    renderLabelFilters();
+    drawResidents();
+    renderList();
+}
+async function saveResident() {
+    const person = document.getElementById('rsPerson').value.trim();
+    const label  = document.getElementById('rsLabel').value.trim();
+    if (!person || !pickedStation || !label) return;
+    const btn = document.getElementById('saveBtn'), msg = document.getElementById('rsMsg');
+    btn.disabled = true; msg.textContent = '저장 중…'; msg.className = 'muted';
+    try {
+        const r = await apiPost({ action: 'saveResident', person, label, station: pickedStation.name, lat: pickedStation.lat, lng: pickedStation.lng });
+        if (!r.ok) throw new Error(r.error);
+        document.getElementById('rsSearch').value = '';
+        document.getElementById('rsLabel').value = '';
+        pickedStation = null;
+        msg.textContent = r.updated ? '수정됨(덮어쓰기)' : '저장됨';
+        await reload();
+    } catch (e) { msg.textContent = e.message; msg.className = 'err'; }
+    syncSaveBtn();
+}
+async function delResident(person, label) {
+    if (!confirm(`"${person} · ${label}" 을(를) 삭제할까요?`)) return;
+    await apiPost({ action: 'delResident', person, label });
+    await reload();
+}
+
+/* ============================================================
+   시작
+   ============================================================ */
+function showFatal(msg) {
+    const b = document.getElementById('setupBanner');
+    b.style.display = 'block';
+    b.innerHTML = '⛔ ' + msg;
+}
+
+(async function init() {
+    if (typeof L === 'undefined' || !L.map) {
+        showFatal('지도 라이브러리(Leaflet)를 불러오지 못했습니다. 인터넷/unpkg.com 접근을 확인하세요.');
+        return;
+    }
+    // 타일 없음: 서울 중심으로 지리 좌표계만 사용
+    map = L.map('map', { zoomControl: true, attributionControl: true }).setView([37.55, 126.99], 11);
+    map.attributionControl.addAttribution('역 좌표 ⓒ 공공데이터 · 도둑의 지도 테마');
+    geoLayer = L.layerGroup().addTo(map);
+    lineLayer = L.layerGroup();            // 노선도: 기본 숨김(토글로 on)
+    placeLayer = L.layerGroup().addTo(map); // 지명 오버레이: 기본 표시
+    drawPlaceNames();
+    residentLayer = L.layerGroup().addTo(map);
+    map.on('zoomend moveend', relayout);
+    renderLabelOptions();
+
+    // D안: 배경 이미지 시도 → 성공하면 그림 배경, 실패하면 벡터 폴백
+    const probe = new Image();
+    probe.onload = () => {
+        L.imageOverlay(IMG_URL, IMG_BOUNDS, { interactive: false, zIndex: 1 }).addTo(map);
+        map.setMaxBounds(L.latLngBounds(IMG_BOUNDS).pad(0.15)); // 지도 밖으로 과도한 패닝 방지
+        logImageSpec();
+    };
+    probe.onerror = () => {
+        drawGeo(); // 임시 벡터 배경
+        const b = document.getElementById('setupBanner');
+        b.style.display = 'block';
+        b.innerHTML = `🗺️ 배경 이미지 <code>${IMG_URL}</code> 가 아직 없어 <b>임시 벡터 배경</b>을 표시 중입니다. ` +
+            `<code>map/</code> 에 이미지를 올리면 그림 배경으로 바뀝니다. (콘솔에 권장 이미지 범위·비율 출력)`;
+        logImageSpec();
+    };
+    probe.src = IMG_URL;
+
+    // 역 좌표(검색/저장용): 원본 CSV 시도 후 폴백
+    let source = '최신';
+    try {
+        const res = await fetch(SUBWAY_CSV);
+        if (!res.ok) throw new Error('원본 응답 ' + res.status);
+        STATIONS = parseSubwayCsv(await res.text());
+        if (STATIONS.length < 100) throw new Error('데이터가 비정상적으로 적음');
+    } catch (e) {
+        STATIONS = window.SUBWAY_FALLBACK || [];
+        source = '폴백';
+    }
+    STATIONS.forEach(s => { if (!stationByName[s.name]) stationByName[s.name] = s; });
+    if (STATIONS.length) { drawLines(); toggleLines(); } // 노선 미리 그려두고 토글 상태 반영
+    document.getElementById('status').textContent = STATIONS.length
+        ? `서울 실제 위치 · 역 좌표 ${STATIONS.length}개 (${source})`
+        : '역 좌표를 불러오지 못했습니다.';
+
+    if (!API_URL) {
+        showFatal('거주지 저장을 쓰려면 상단 <b>API_URL</b> 을 넣어주세요.');
+        return;
+    }
+    try { await reload(); }
+    catch (e) {
+        showFatal('거주지/명단 로드 실패 — ' + e.message);
+        document.getElementById('rsMsg').textContent = e.message;
+        document.getElementById('rsMsg').className = 'err';
+    }
+})();
+</script>
+</body>
+</html>
