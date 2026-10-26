@@ -253,6 +253,7 @@ const WRITE_TOKEN = 'wagle-write-token';
 /* 디멘터: 이름 박스 없이 둥둥 떠다니는 👻 로 표시하는 특수 라벨 */
 const DEMENTOR = '디멘터';
 const isDementor = l => String(l || '').trim() === DEMENTOR;
+const DEMENTOR_IMG = 'assets/dementor.png'; // 이름표 위 디멘터 아이콘(줌에 따라 리사이즈)
 
 /* 라벨별 색상(양피지 잉크 톤) */
 const LABEL_COLORS = { '집': '#a8742f', '직장': '#4f6d86', '루모스': '#F5EBB3', '디멘터': '#000000' };
@@ -642,10 +643,10 @@ function ghostHtml(fs, skull) {
 }
 function fullIcon(color, lines, hasGhost, fs) {
     const padY = Math.max(1, Math.round(fs * 0.16)), padX = padY + 4;
-    const skullSize = Math.max(11, Math.round(fs * 0.95));
+    const skullSize = Math.max(55, Math.round(fs * 4.75)); // 디멘터 아이콘(기존 💀 대비 ~5배)
     const skull = hasGhost ? `<div style="position:absolute;bottom:100%;left:50%;transform:translateX(-50%);cursor:pointer">
-            <span class="wg-skull" style="display:inline-block;font-size:${skullSize}px;line-height:1;
-                filter:drop-shadow(0 1px 1px rgba(40,30,20,.55))">💀</span></div>` : '';
+            <img class="wg-skull" src="${DEMENTOR_IMG}" alt="dementor" style="display:block;width:${skullSize}px;height:auto;
+                filter:drop-shadow(0 1px 1px rgba(40,30,20,.55))"></div>` : '';
     const names = lines.map(l => `<div>${l}</div>`).join('');
     const delay = ((lines.join('').length % 10) * 0.23).toFixed(2); // 라벨마다 살짝 비동기
     const box = lines.length ? `<div class="wg-nametag" style="position:absolute;transform:translate(-50%,-100%) rotate(-1.6deg);margin-top:-12px;cursor:pointer;animation-delay:${delay}s;
