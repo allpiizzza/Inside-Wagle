@@ -570,7 +570,7 @@ function showFatal(msg) {
     const ph = parchBounds.getNorth() - parchBounds.getSouth();
     L.imageOverlay(parchmentDataUri(pw, ph), parchBounds, { zIndex: 1, interactive: false }).addTo(map);
     // 2) 세피아 잉크 노선/역 (배경 투명 SVG)
-    L.imageOverlay('maraudersmap.svg', bounds, { zIndex: 2, attribution: '노선도 ⓒ Wikimedia Commons · 와글의 지도 테마' }).addTo(map);
+    L.imageOverlay('assets/maraudersmap.svg', bounds, { zIndex: 2, attribution: '노선도 ⓒ Wikimedia Commons · 와글의 지도 테마' }).addTo(map);
     map.fitBounds(bounds);
     map.setMaxBounds(parchBounds);
     zFit = map.getZoom();

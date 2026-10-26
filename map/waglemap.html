@@ -425,7 +425,7 @@ function showFatal(msg) {
     // 도식 노선도(SVG)를 배경 이미지로 깔기 (CRS.Simple)
     map = L.map('map', { crs: L.CRS.Simple, minZoom: -5, maxZoom: 3, zoomSnap: 0.25, attributionControl: true });
     const bounds = [[0, 0], [SVG_H, SVG_W]];
-    L.imageOverlay('subwaymap.svg', bounds, { attribution: '노선도 ⓒ Wikimedia Commons' }).addTo(map);
+    L.imageOverlay('assets/subwaymap.svg', bounds, { attribution: '노선도 ⓒ Wikimedia Commons' }).addTo(map);
     map.fitBounds(bounds);
     map.setMaxBounds(L.latLngBounds(bounds).pad(0.3));
     zFit = map.getZoom();

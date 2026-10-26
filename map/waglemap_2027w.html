@@ -161,6 +161,15 @@
         }
         .wg-nametag { animation: wgtagbob 3.4s ease-in-out infinite; }
 
+        /* 마루더즈 발자국 궤적(gif 1회 재생: 발자국이 찍히며 걸어가 사라짐) */
+        .wg-foot {
+            position: absolute;
+            transform: translate(-50%, -50%) rotate(var(--rot));
+            opacity: var(--peak);
+            filter: drop-shadow(0 1px 1px rgba(60,40,20,.4));
+            pointer-events: none;
+        }
+
         /* 강 이름 등 지도 주기(注記) */
         .wg-geo-label { font-family: "IM Fell English", serif; font-style: italic; color: #4a6072; font-size: 15px;
             font-weight: 400; white-space: nowrap; text-shadow: 0 1px 0 rgba(247,238,205,.6); }
@@ -344,7 +353,7 @@ const GU_DASH = '4,4'; // 구/시 경계 점선 스타일 (선택지는 아래 �
    - 이미지를 map/ 에 올리면 그림 배경으로, 없으면 벡터 배경으로 자동 폴백.
    - IMG_BOUNDS = 이미지가 담는 실제 지리 범위(Web Mercator 기준). 이 범위대로 이미지를 제작해야 라벨이 정확히 맞음.
    ============================================================ */
-const IMG_URL = 'maraudersmap_seoul.png';                 // map/ 에 올릴 배경 파일명
+const IMG_URL = 'assets/maraudersmap_seoul.png';          // map/assets/ 배경 파일
 const IMG_BOUNDS = [[37.05, 126.55], [37.85, 127.45]];    // [[남위,서경],[북위,동경]]
 
 // 반평면 클리핑(Sutherland-Hodgman): A 에 더 가까운 쪽만 남김
@@ -384,7 +393,7 @@ function voronoiCells(sites, boundary) {
 /* ============================================================
    상태
    ============================================================ */
-let map = null, geoLayer = null, lineLayer = null, placeLayer = null, residentLayer = null;
+let map = null, geoLayer = null, lineLayer = null, placeLayer = null, residentLayer = null, footprintLayer = null;
 let STATIONS = [];
 let RESIDENTS = [];
 let NAMES = [];
@@ -462,6 +471,105 @@ function togglePlaces() {
     const on = document.getElementById('placeToggle').checked;
     if (on) { if (!map.hasLayer(placeLayer)) placeLayer.addTo(map); }
     else { if (map.hasLayer(placeLayer)) map.removeLayer(placeLayer); }
+}
+
+/* ============================================================
+   마루더즈 맵 발자국 — 지도 위에 랜덤 위치/방향/투명도로 흩뿌림
+   ============================================================ */
+const FOOTPRINT_GIF = 'assets/footprint.gif'; // 걸어가는 발자국 궤적 gif(비반복, ~4.76s) → CSS 회전으로 방향 랜덤
+const FOOTPRINT_SEED = 4;           // 시작할 때 미리 깔아둘 궤적 수
+const FOOTPRINT_GAP = [1000, 2200]; // 다음 묶음까지 랜덤 간격(ms)
+const FOOTPRINT_BATCH = [1, 2];     // 한 번에 찍는 궤적 수(랜덤) — 표시 시간 겹침 허용
+const FOOTPRINT_BASE_MS = 4760;     // 원본 gif 1회 재생 길이(측정값)
+const FOOTPRINT_SPEEDS = [1.0, 1.0, 1.5, 2.0]; // 재생 배속(>1=느리게). 값 중복 비율 = 등장 확률
+let footprintTimer = null, footId = 0, FOOT_VARIANTS = [];
+
+// 발자국 하나를 랜덤 위치/방향/투명도로 찍고, 수명이 끝나면 스스로 제거
+function spawnFootprint() {
+    if (!footprintLayer || !map) return;
+    // 지금 보이는 화면 영역 안에서만 랜덤 배치 (줌/패닝 따라감) → 항상 눈에 보임
+    const b = map.getBounds();
+    const s = b.getSouth(), n = b.getNorth(), w = b.getWest(), e = b.getEast();
+    const lat = s + Math.random() * (n - s);
+    const lng = w + Math.random() * (e - w);
+    const peak = (0.70 + Math.random() * 0.20).toFixed(2);       // 70~90%
+    const size = 150 + Math.round(Math.random() * 110);          // 150~260px (발자국 궤적 한 벌)
+    const rot = (Math.random() * 360).toFixed(1);                // 0~360° 자유 회전
+    // 비반복 gif는 인스턴스마다 프레임0부터 재생돼야 함(안 하면 캐시된 '빈 마지막 프레임'만 뜸).
+    // 배속별 Blob 사본 중 하나를 랜덤 선택 → 매번 새 object URL로 재생(네트워크 재요청 0).
+    // 수명은 선택된 배속의 재생 길이에 맞춤(느릴수록 더 오래 남김). (사본이 없으면 ?k= 쿼리로 폴백)
+    let src, revoke = null, life = FOOTPRINT_BASE_MS;
+    if (FOOT_VARIANTS.length) {
+        const v = FOOT_VARIANTS[Math.floor(Math.random() * FOOT_VARIANTS.length)];
+        src = URL.createObjectURL(v.blob); revoke = src; life = v.ms;
+    } else {
+        src = `${FOOTPRINT_GIF}?k=${footId++}`;
+    }
+    const html = `<img src="${src}" class="wg-foot"
+        style="width:${size}px;height:auto;--peak:${peak};--rot:${rot}deg;">`;
+    const m = L.marker([lat, lng], {
+        icon: L.divIcon({ html, iconSize: [0, 0], className: '' }),
+        interactive: false, zIndexOffset: -500
+    }).addTo(footprintLayer);
+    setTimeout(() => { footprintLayer.removeLayer(m); if (revoke) URL.revokeObjectURL(revoke); }, life + 300);
+}
+
+// 랜덤 간격으로 끊임없이 발자국 묶음(2~3개)을 찍는 루프
+function scheduleFootprint() {
+    const [lo, hi] = FOOTPRINT_GAP;
+    const delay = lo + Math.random() * (hi - lo);
+    footprintTimer = setTimeout(() => {
+        const [blo, bhi] = FOOTPRINT_BATCH;
+        const n = blo + Math.floor(Math.random() * (bhi - blo + 1));
+        for (let i = 0; i < n; i++) spawnFootprint();
+        scheduleFootprint();
+    }, delay);
+}
+
+// gif 프레임 지연(delay) 바이트만 배속만큼 늘려 '같은 그림, 다른 속도' 사본 생성 (이미지 재인코딩 없음)
+function retimeGif(buf, factor) {
+    const b = new Uint8Array(buf.slice(0));
+    let p = 6;                       // "GIF89a" 헤더
+    const packed = b[p + 4]; p += 7; // Logical Screen Descriptor
+    if (packed & 0x80) p += 3 * (1 << ((packed & 7) + 1)); // Global Color Table
+    while (p < b.length) {
+        const blk = b[p];
+        if (blk === 0x3B) break;     // 트레일러
+        if (blk === 0x21) {          // 확장 블록
+            if (b[p + 1] === 0xF9) { // Graphic Control Extension → 프레임 지연값 수정
+                let d = b[p + 4] | (b[p + 5] << 8);                // 1/100초 단위
+                d = Math.min(65535, Math.max(2, Math.round(d * factor)));
+                b[p + 4] = d & 0xFF; b[p + 5] = (d >> 8) & 0xFF;
+            }
+            p += 2;
+            while (b[p]) p += b[p] + 1; p += 1; // 서브블록 스킵
+        } else if (blk === 0x2C) {   // 이미지 디스크립터
+            p += 1; const lp = b[p + 8]; p += 9;
+            if (lp & 0x80) p += 3 * (1 << ((lp & 7) + 1)); // Local Color Table
+            p += 1;                  // LZW 최소 코드 크기
+            while (b[p]) p += b[p] + 1; p += 1; // 이미지 데이터 스킵
+        } else break;
+    }
+    return b;
+}
+
+// gif를 1회만 받아 배속별 사본을 Blob으로 만들어 보관 (이후 재다운로드·재파싱 없음)
+async function loadFootprintVariants() {
+    try {
+        const res = await fetch(FOOTPRINT_GIF);
+        if (!res.ok) return;
+        const buf = await res.arrayBuffer();
+        FOOT_VARIANTS = FOOTPRINT_SPEEDS.map(f => ({
+            blob: new Blob([retimeGif(buf, f)], { type: 'image/gif' }),
+            ms: Math.round(FOOTPRINT_BASE_MS * f)
+        }));
+    } catch (e) { /* 실패 시 spawnFootprint가 ?k= 쿼리로 폴백 */ }
+}
+
+function startFootprints() {
+    if (footprintTimer) clearTimeout(footprintTimer);
+    for (let i = 0; i < FOOTPRINT_SEED; i++) spawnFootprint(); // 처음부터 북적이게
+    scheduleFootprint();
 }
 
 /* 지리 잉크 레이어 그리기 */
@@ -741,6 +849,9 @@ function showFatal(msg) {
     lineLayer = L.layerGroup();            // 노선도: 기본 숨김(토글로 on)
     placeLayer = L.layerGroup().addTo(map); // 지명 오버레이: 기본 표시
     drawPlaceNames();
+    footprintLayer = L.layerGroup().addTo(map); // 발자국: 지명 위, 이름표 아래
+    await loadFootprintVariants();              // gif 1회만 받아 배속별 Blob 사본 보관 → 재다운로드 없음
+    startFootprints();
     residentLayer = L.layerGroup().addTo(map);
     map.on('zoomend moveend', relayout);
     renderLabelOptions();
