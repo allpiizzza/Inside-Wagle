@@ -482,8 +482,28 @@ const FOOTPRINT_SEED = 4;           // 시작할 때 미리 깔아둘 궤적 수
 const FOOTPRINT_GAP = [1000, 2200]; // 다음 묶음까지 랜덤 간격(ms)
 const FOOTPRINT_BATCH = [1, 2];     // 한 번에 찍는 궤적 수(랜덤) — 표시 시간 겹침 허용
 const FOOTPRINT_BASE_MS = 4760;     // 원본 gif 1회 재생 길이(측정값)
-const FOOTPRINT_SPEEDS = [1.0, 1.0, 1.5, 2.0]; // 재생 배속(>1=느리게). 값 중복 비율 = 등장 확률
+const FOOTPRINT_SPEEDS = [1.5, 2.0]; // 재생 배속(>1=느리게): 느린것/아주느린것 두 종만. 값 중복 비율 = 등장 확률
 let footprintTimer = null, footId = 0, FOOT_VARIANTS = [];
+
+// 발자국 렌더 진단(실기기 콘솔 없이 원인 파악): 주소에 ?footdebug=1 붙이면 지도 위 상태표시
+const FOOT_DEBUG = /[?&]footdebug=1/.test(location.search);
+const footStat = { spawned: 0, loaded: 0, errored: 0 };
+window.__footOk = function () { footStat.loaded++; };
+// 이미지 로드 실패 시 서버 원본(?k=)으로 1회 폴백 — data URI가 막히는 환경 대비
+window.__footErr = function (img) {
+    footStat.errored++;
+    if (!img.dataset.fb) { img.dataset.fb = '1'; img.src = FOOTPRINT_GIF + '?k=' + (footId++); }
+};
+
+// Uint8Array → base64 (data URI용). 큰 배열은 청크로 나눠 apply 스택 한계 회피.
+function bytesToBase64(u8) {
+    let s = '';
+    const chunk = 0x8000;
+    for (let i = 0; i < u8.length; i += chunk) {
+        s += String.fromCharCode.apply(null, u8.subarray(i, i + chunk));
+    }
+    return btoa(s);
+}
 
 // 발자국 하나를 랜덤 위치/방향/투명도로 찍고, 수명이 끝나면 스스로 제거
 function spawnFootprint() {
@@ -494,28 +514,36 @@ function spawnFootprint() {
     const lat = s + Math.random() * (n - s);
     const lng = w + Math.random() * (e - w);
     const peak = (0.70 + Math.random() * 0.20).toFixed(2);       // 70~90%
-    const size = 150 + Math.round(Math.random() * 110);          // 150~260px (발자국 궤적 한 벌)
+    // 모바일 화면에선 큰 발자국이 과하게 보여 최소/범위를 축소 (데스크톱 150~260px → 모바일 90~160px)
+    const isMobile = window.innerWidth <= 600;
+    const sizeBase = isMobile ? 90 : 150;
+    const sizeRange = isMobile ? 70 : 110;
+    const size = sizeBase + Math.round(Math.random() * sizeRange); // 발자국 궤적 한 벌
     const rot = (Math.random() * 360).toFixed(1);                // 0~360° 자유 회전
     // 비반복 gif는 인스턴스마다 프레임0부터 재생돼야 함(안 하면 캐시된 '빈 마지막 프레임'만 뜸).
     // 배속별 Blob 사본 중 하나를 랜덤 선택 → 매번 새 object URL로 재생(네트워크 재요청 0).
     // 수명은 선택된 배속의 재생 길이에 맞춤(느릴수록 더 오래 남김). (사본이 없으면 ?k= 쿼리로 폴백)
-    let src, revoke = null, life = FOOTPRINT_BASE_MS;
+    let src, life = FOOTPRINT_BASE_MS;
     if (FOOT_VARIANTS.length) {
         const v = FOOT_VARIANTS[Math.floor(Math.random() * FOOT_VARIANTS.length)];
         // iOS Safari는 동일 콘텐츠의 비반복 gif를 하나의 애니메이션으로 묶어, 새 인스턴스에 '끝난 마지막(빈) 프레임'만 보여줌.
         // 인스턴스마다 고유 주석 바이트를 심어 '다른 이미지'로 인식시키면 매번 프레임0부터 다시 재생됨.
-        const blob = new Blob([withUniqueComment(v.bytes, footId++)], { type: 'image/gif' });
-        src = URL.createObjectURL(blob); revoke = src; life = v.ms;
+        // iOS 최신(아이폰 17 등)에선 URL.createObjectURL(Blob) gif 재생이 실패해 아예 안 보이는 사례가 있어,
+        // 호환성이 더 높은 data URI(base64)로 삽입한다. (고유 바이트 유지 → 캐시 공유 문제도 그대로 회피)
+        src = 'data:image/gif;base64,' + bytesToBase64(withUniqueComment(v.bytes, footId++));
+        life = v.ms;
     } else {
         src = `${FOOTPRINT_GIF}?k=${footId++}`;
     }
+    footStat.spawned++;
     const html = `<img src="${src}" class="wg-foot"
-        style="width:${size}px;height:auto;--peak:${peak};--rot:${rot}deg;">`;
+        style="width:${size}px;height:auto;--peak:${peak};--rot:${rot}deg;"
+        onload="window.__footOk&&window.__footOk()" onerror="window.__footErr&&window.__footErr(this)">`;
     const m = L.marker([lat, lng], {
         icon: L.divIcon({ html, iconSize: [0, 0], className: '' }),
         interactive: false, zIndexOffset: -500
     }).addTo(footprintLayer);
-    setTimeout(() => { footprintLayer.removeLayer(m); if (revoke) URL.revokeObjectURL(revoke); }, life + 300);
+    setTimeout(() => { footprintLayer.removeLayer(m); }, life + 300);
 }
 
 // 랜덤 간격으로 끊임없이 발자국 묶음(2~3개)을 찍는 루프
@@ -586,6 +614,21 @@ function startFootprints() {
     if (footprintTimer) clearTimeout(footprintTimer);
     for (let i = 0; i < FOOTPRINT_SEED; i++) spawnFootprint(); // 처음부터 북적이게
     scheduleFootprint();
+    if (FOOT_DEBUG) setInterval(footDebugTick, 500);
+}
+
+// ?footdebug=1 일 때만: 지도 좌하단에 발자국 렌더 상태 표시 (실기기 콘솔 없이 원인 파악용)
+function footDebugTick() {
+    let el = document.getElementById('footdbg');
+    if (!el) {
+        el = document.createElement('div');
+        el.id = 'footdbg';
+        el.style.cssText = 'position:fixed;left:6px;bottom:6px;z-index:99999;background:rgba(0,0,0,.82);' +
+            'color:#5f5;font:11px/1.5 monospace;padding:6px 9px;border-radius:5px;white-space:pre;pointer-events:none;';
+        document.body.appendChild(el);
+    }
+    const live = document.querySelectorAll('.wg-foot').length;
+    el.textContent = `variants:${FOOT_VARIANTS.length}\nspawned:${footStat.spawned} load:${footStat.loaded} err:${footStat.errored}\nlive DOM:${live}`;
 }
 
 /* 지리 잉크 레이어 그리기 */
@@ -624,7 +667,7 @@ function coordsOf(r) {
 }
 
 let RESIDENT_GROUPS = [];
-const activeLabels = new Set(['집', '루모스', '디멘터']); // 기본 ON (직장 OFF)
+const activeLabels = new Set(['디멘터']); // 기본 ON: 디멘터만 (집·직장·루모스는 OFF)
 
 function buildGroups() {
     const byPos = {};
