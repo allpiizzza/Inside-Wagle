@@ -502,7 +502,10 @@ function spawnFootprint() {
     let src, revoke = null, life = FOOTPRINT_BASE_MS;
     if (FOOT_VARIANTS.length) {
         const v = FOOT_VARIANTS[Math.floor(Math.random() * FOOT_VARIANTS.length)];
-        src = URL.createObjectURL(v.blob); revoke = src; life = v.ms;
+        // iOS Safari는 동일 콘텐츠의 비반복 gif를 하나의 애니메이션으로 묶어, 새 인스턴스에 '끝난 마지막(빈) 프레임'만 보여줌.
+        // 인스턴스마다 고유 주석 바이트를 심어 '다른 이미지'로 인식시키면 매번 프레임0부터 다시 재생됨.
+        const blob = new Blob([withUniqueComment(v.bytes, footId++)], { type: 'image/gif' });
+        src = URL.createObjectURL(blob); revoke = src; life = v.ms;
     } else {
         src = `${FOOTPRINT_GIF}?k=${footId++}`;
     }
@@ -525,6 +528,18 @@ function scheduleFootprint() {
         for (let i = 0; i < n; i++) spawnFootprint();
         scheduleFootprint();
     }, delay);
+}
+
+// 렌더링에 영향 없는 고유 주석(Comment Extension)을 트레일러 앞에 끼워 넣어 인스턴스마다 '다른 이미지'로 만듦.
+// → iOS Safari가 동일 콘텐츠 비반복 gif를 공유 처리해 '빈 프레임'만 보이는 문제를 피하고 프레임0부터 재생.
+function withUniqueComment(bytes, id) {
+    const tag = [id & 0xFF, (id >> 8) & 0xFF, (id >> 16) & 0xFF];
+    const comment = [0x21, 0xFE, tag.length, ...tag, 0x00]; // Comment Extension 블록
+    const out = new Uint8Array(bytes.length + comment.length);
+    out.set(bytes.subarray(0, bytes.length - 1), 0);        // 트레일러(0x3B) 직전까지 복사
+    out.set(comment, bytes.length - 1);                     // 주석 삽입
+    out[out.length - 1] = 0x3B;                             // 트레일러 복원
+    return out;
 }
 
 // gif 프레임 지연(delay) 바이트만 배속만큼 늘려 '같은 그림, 다른 속도' 사본 생성 (이미지 재인코딩 없음)
@@ -561,7 +576,7 @@ async function loadFootprintVariants() {
         if (!res.ok) return;
         const buf = await res.arrayBuffer();
         FOOT_VARIANTS = FOOTPRINT_SPEEDS.map(f => ({
-            blob: new Blob([retimeGif(buf, f)], { type: 'image/gif' }),
+            bytes: retimeGif(buf, f),   // Uint8Array 원본 보관 → 인스턴스마다 고유 Blob 생성(iOS 재생용)
             ms: Math.round(FOOTPRINT_BASE_MS * f)
         }));
     } catch (e) { /* 실패 시 spawnFootprint가 ?k= 쿼리로 폴백 */ }
