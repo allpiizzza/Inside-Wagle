@@ -586,8 +586,13 @@
             }
             angleToCenter += ((slices[winningIndex].weight / totalWeight) * 360) / 2;
 
-            const targetRotation = baseSpins - angleToCenter;
-            currentRotation += targetRotation;
+            // 🔧 회전값을 그냥 더하면 직전 스핀의 잔여각이 남아 휠과 결과가 어긋난다.
+            //    (2회차부터 팝업과 실제 멈춘 위치가 달라지던 버그)
+            //    포인터가 당첨 조각을 가리키는 '절대 각도'를 먼저 구하고,
+            //    거기에 최소 5바퀴를 채우는 만큼만 더해 앞으로 돌린다.
+            const targetAngle = ((-angleToCenter % 360) + 360) % 360;
+            const minRotation = currentRotation + baseSpins;
+            currentRotation = minRotation + (((targetAngle - minRotation) % 360) + 360) % 360;
 
             canvas.style.transform = `rotate(${currentRotation}deg)`;
 
