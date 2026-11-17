@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔮 와글 인사이드 운명의 룰렛 </title>
+    <script src="/js/common.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        :root {
+            --gold: #d4af37;
+            --gold-soft: #f0d98c;
+            --gold-deep: #9a7b1e;
+            --purple: #7b4bc9;
+            --purple-glow: #a66bff;
+            --ink: #0d0618;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background:
+                radial-gradient(circle at 20% 15%, rgba(123,75,201,0.28), transparent 45%),
+                radial-gradient(circle at 80% 85%, rgba(166,107,255,0.22), transparent 45%),
+                linear-gradient(160deg, #16072b 0%, #0d0618 55%, #050109 100%);
+            background-attachment: fixed;
+            color: #ece3ff;
+            padding: 20px 15px;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 22px;
+            position: relative;
+            overflow-x: hidden;
+            min-height: 100vh;
+            min-height: 100dvh;
+        }
+
+        /* 신비로운 별/달 장식 */
+        .float-mystic {
+            position: absolute;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            animation-name: floaty;
+            animation-timing-function: ease-in-out;
+            animation-iteration-count: infinite;
+            animation-direction: alternate;
+            z-index: 0;
+            pointer-events: none;
+            filter: drop-shadow(0 0 6px rgba(212,175,55,0.5));
+        }
+        @keyframes floaty {
+            0%   { transform: translateY(0px) translateX(0px) rotate(0deg); }
+            100% { transform: translateY(-18px) translateX(6px) rotate(14deg); }
+        }
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.25; }
+            50% { opacity: 0.9; }
+        }
+
+        .card {
+            position: relative;
+            z-index: 1;
+            background:
+                radial-gradient(circle at 50% 0%, rgba(123,75,201,0.18), transparent 60%),
+                linear-gradient(170deg, #1c0d36 0%, #140826 100%);
+            border-radius: 18px;
+            padding: 26px 24px;
+            width: 100%;
+            max-width: 420px;
+            box-sizing: border-box;
+            border: 1.5px solid var(--gold);
+            box-shadow:
+                0 0 0 1px rgba(212,175,55,0.25) inset,
+                0 12px 40px rgba(0,0,0,0.6),
+                0 0 24px rgba(166,107,255,0.25);
+        }
+        .card.neon { animation: neonPulse 3.4s ease-in-out infinite; }
+
+        h3 {
+            margin: 0 0 6px 0;
+            text-align: center;
+            font-size: 26px;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            font-weight: 700;
+            letter-spacing: 1px;
+            color: var(--gold);
+            text-shadow: 0 0 10px rgba(212,175,55,0.45), 0 2px 4px rgba(0,0,0,0.6);
+        }
+        .subtitle {
+            font-size: 14px;
+            color: var(--gold-soft);
+            text-align: center;
+            margin-bottom: 18px;
+            font-weight: 400;
+            letter-spacing: 0.5px;
+            opacity: 0.85;
+        }
+        .back-link {
+            font-size: 13px;
+            color: #b79ad6;
+            text-decoration: none;
+            display: inline-block;
+            margin-bottom: 4px;
+            opacity: 0.8;
+        }
+        .back-link:hover { color: var(--gold-soft); }
+
+        .roulette-wrapper {
+            position: relative;
+            width: 320px;
+            height: 320px;
+            margin: 28px auto 20px auto;
+            max-width: 100%;
+        }
+        .pointer {
+            position: absolute;
+            top: -14px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 18px solid transparent;
+            border-right: 18px solid transparent;
+            border-top: 36px solid var(--gold);
+            z-index: 20;
+            filter: drop-shadow(0px 2px 5px rgba(0,0,0,0.6)) drop-shadow(0 0 6px rgba(212,175,55,0.6));
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            box-shadow:
+                0 0 0 5px #140826,
+                0 0 0 7px var(--gold),
+                0 0 30px rgba(166,107,255,0.45),
+                0 10px 30px rgba(0,0,0,0.6);
+            transition: transform 4s cubic-bezier(0.1, 0.7, 0.1, 1);
+        }
+        .center-circle {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 64px;
+            height: 64px;
+            background: radial-gradient(circle, #2a1550 25%, #140826 100%);
+            border: 2.5px solid var(--gold);
+            border-radius: 50%;
+            z-index: 10;
+            box-shadow: 0 0 14px rgba(212,175,55,0.5), 0 2px 8px rgba(0,0,0,0.6);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 28px;
+        }
+
+        .btn-spin {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            border: 1.5px solid var(--gold);
+            border-radius: 12px;
+            font-size: 18px;
+            font-weight: 700;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            letter-spacing: 1px;
+            cursor: pointer;
+            background: linear-gradient(135deg, #3a1d6e, #7b4bc9);
+            color: var(--gold-soft);
+            text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+            box-shadow: 0 6px 18px rgba(123,75,201,0.4), 0 0 14px rgba(212,175,55,0.25);
+            transition: transform 0.15s ease, opacity 0.2s;
+        }
+        .btn-spin:active { transform: scale(0.97); }
+        .btn-spin:disabled {
+            background: #1c122e;
+            color: #6b5e86;
+            border-color: #4a3a6b;
+            box-shadow: none;
+            cursor: not-allowed;
+        }
+        .btn-spin .btn-hint {
+            display: block;
+            font-size: 12px;
+            font-weight: 400;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            letter-spacing: 0;
+            margin-top: 5px;
+            opacity: 0.85;
+        }
+
+        @keyframes neonPulse {
+            0%   { box-shadow: 0 0 0 1px rgba(212,175,55,0.25) inset, 0 12px 40px rgba(0,0,0,0.6), 0 0 20px rgba(166,107,255,0.25); }
+            50%  { box-shadow: 0 0 0 1px rgba(212,175,55,0.45) inset, 0 12px 40px rgba(0,0,0,0.6), 0 0 34px rgba(212,175,55,0.4); }
+            100% { box-shadow: 0 0 0 1px rgba(212,175,55,0.25) inset, 0 12px 40px rgba(0,0,0,0.6), 0 0 20px rgba(166,107,255,0.25); }
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        @keyframes marquee {
+            0% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+        }
+        .ad-marquee {
+            width: 100%;
+            max-width: 420px;
+            background: linear-gradient(90deg, #1c0d36, #2a1550, #1c0d36);
+            color: var(--gold-soft);
+            font-size: 13px;
+            font-weight: 700;
+            padding: 7px 0;
+            overflow: hidden;
+            white-space: nowrap;
+            border-radius: 8px;
+            border: 1px solid rgba(212,175,55,0.4);
+            box-shadow: 0 0 12px rgba(166,107,255,0.3);
+        }
+        .ad-marquee span {
+            display: inline-block;
+            padding-left: 100%;
+            animation: marquee 12s linear infinite;
+        }
+        .live-counter {
+            font-size: 13px;
+            color: var(--purple-glow);
+            text-align: center;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .live-counter .dot {
+            display: inline-block;
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: var(--purple-glow);
+            margin-right: 5px;
+            box-shadow: 0 0 6px var(--purple-glow);
+            animation: blink 1.2s infinite;
+        }
+        .hot-badge {
+            position: absolute;
+            top: -12px;
+            right: -8px;
+            background: linear-gradient(135deg, var(--gold), var(--gold-deep));
+            color: #1c0d36;
+            font-size: 12px;
+            font-weight: 800;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            padding: 4px 10px;
+            border-radius: 12px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.5), 0 0 10px rgba(212,175,55,0.5);
+            animation: blink 1.2s infinite;
+            transform: rotate(8deg);
+        }
+        .trust-footer {
+            font-size: 12px;
+            color: #8a7aa8;
+            text-align: center;
+            margin-top: 14px;
+            letter-spacing: 0.2px;
+        }
+
+        /* 이름/날짜 입력 (다크 타로 톤) */
+        .field-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 4px;
+        }
+        .field-row .field {
+            flex: 1;
+            min-width: 0;
+        }
+        .field label {
+            display: block;
+            font-size: 13px;
+            font-weight: 700;
+            color: var(--gold-soft);
+            margin-bottom: 6px;
+            text-align: center;
+            letter-spacing: 0.3px;
+        }
+        .field input[type="date"],
+        .field select {
+            width: 100%;
+            border: 1.5px solid rgba(212,175,55,0.4);
+            border-radius: 8px;
+            padding: 10px 6px;
+            font-size: 15px;
+            font-family: inherit;
+            color: #ece3ff;
+            box-sizing: border-box;
+            background: #140826;
+            text-align: center;
+            text-align-last: center;
+        }
+        .field input[type="date"] { color-scheme: dark; }
+        .field select option { color: #ece3ff; background: #1c0d36; }
+        .field select optgroup { color: var(--gold); background: #140826; }
+        .field input:focus,
+        .field select:focus {
+            outline: none;
+            border-color: var(--gold);
+        }
+
+        /* 돌린 사람들 기록 */
+        #loading {
+            display: none;
+            font-size: 13px;
+            color: var(--purple-glow);
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .record-title {
+            text-align: center;
+            font-size: 18px;
+            font-weight: 700;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            letter-spacing: 1px;
+            color: var(--gold);
+            text-shadow: 0 0 8px rgba(212,175,55,0.35);
+            margin-bottom: 12px;
+        }
+        .record-list {
+            list-style: none;
+            max-height: 240px;
+            overflow-y: auto;
+        }
+        .record-list li {
+            display: flex;
+            justify-content: space-between;
+            font-size: 15px;
+            padding: 9px 2px;
+            border-bottom: 1px solid rgba(212,175,55,0.18);
+            color: #e7ddff;
+        }
+        .record-list li:last-child { border-bottom: none; }
+        .record-list li span:last-child {
+            color: var(--gold);
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+
+<script>
+    // 신비로운 별/달/구슬 장식
+    const mysticEmojis = ['✨', '🌙', '⭐', '🔮', '🪄', '💫'];
+    for (let i = 0; i < 24; i++) {
+        const el = document.createElement('div');
+        el.className = 'float-mystic';
+        const size = 16 + Math.random() * 22;
+        el.style.width = size + 'px';
+        el.style.height = size + 'px';
+        el.style.left = Math.random() * 94 + 'vw';
+        el.style.top = Math.random() * 94 + 'vh';
+        el.style.fontSize = (size * 0.8) + 'px';
+        el.style.opacity = (0.3 + Math.random() * 0.4).toFixed(2);
+        el.style.animationDuration = (3 + Math.random() * 2.5) + 's';
+        el.style.animationDelay = (Math.random() * 2) + 's';
+        el.innerText = mysticEmojis[Math.floor(Math.random() * mysticEmojis.length)];
+        document.body.appendChild(el);
+    }
+
+    // 유머용 가짜 실시간 접속자 수 (진짜 데이터 아님, 그냥 놀리는 용도)
+    setInterval(() => {
+        const el = document.getElementById('liveCount');
+        if (el) el.innerText = 20 + Math.floor(Math.random() * 60);
+    }, 2500);
+</script>
+
+<div class="ad-marquee"><span>🔮 운명이 당신을 부른다… ✨ 익명님 도스토예프스키 친필싸인 득템!! 🌙 1% 확률을 뚫은 자여!! ✨ 별들이 속삭이는 오늘의 운세!! 🌙 지금 카드를 뒤집어라!! 🔮</span></div>
+
+<div class="card neon">
+    <div class="hot-badge">운명 HOT🔮</div>
+    <a class="back-link" href="index.html">← 메인으로</a>
+    <h3>운명의 책룰렛</h3>
+    <div class="subtitle">⋆ 별이 정해주는 오늘의 혜택 ⋆</div>
+    <div class="live-counter"><span class="dot"></span>지금 <span id="liveCount">37</span>명이 운명을 점치는 중!</div>
+
+    <div class="field-row">
+        <div class="field">
+            <label>이름</label>
+            <select id="userName">
+                <option value="" disabled selected>이름을 선택하세요</option>
+                <optgroup label="💛 생글이팀">
+                    <option value="따란">따란 (💛 생글이팀)</option>
+                    <option value="에스">에스 (💛 생글이팀)</option>
+                    <option value="송">송 (💛 생글이팀)</option>
+                    <option value="임유월">임유월 (💛 생글이팀)</option>
+                    <option value="윤슬">윤슬 (💛 생글이팀)</option>
+                </optgroup>
+                <optgroup label="💚 당당이팀">
+                    <option value="당근">당근 (💚 당당이팀)</option>
+                    <option value="써니">써니 (💚 당당이팀)</option>
+                    <option value="동글">동글 (💚 당당이팀)</option>
+                    <option value="구마">구마 (💚 당당이팀)</option>
+                    <option value="밍보">밍보 (💚 당당이팀)</option>
+                    <option value="스물">스물 (💚 당당이팀)</option>
+                </optgroup>
+                <optgroup label="💙 포근이팀">
+                    <option value="최미노">최미노 (💙 포근이팀)</option>
+                    <option value="모모">모모 (💙 포근이팀)</option>
+                    <option value="초록">초록 (💙 포근이팀)</option>
+                    <option value="영원">영원 (💙 포근이팀)</option>
+                    <option value="이리">이리 (💙 포근이팀)</option>
+                </optgroup>
+                <optgroup label="💜 중심이팀">
+                    <option value="고래">고래 (💜 중심이팀)</option>
+                    <option value="오핑">오핑 (💜 중심이팀)</option>
+                    <option value="유누">유누 (💜 중심이팀)</option>
+                    <option value="새벽">새벽 (💜 중심이팀)</option>
+                    <option value="주니">주니 (💜 중심이팀)</option>
+                    <option value="수리">수리 (💜 중심이팀)</option>
+                    <option value="모아나">모아나 (💜 중심이팀)</option>
+                </optgroup>
+                <optgroup label="❤️ 불끈이팀">
+                    <option value="채채">채채 (❤️ 불끈이팀)</option>
+                    <option value="신디">신디 (❤️ 불끈이팀)</option>
+                    <option value="난수">난수 (❤️ 불끈이팀)</option>
+                    <option value="제임스">제임스 (❤️ 불끈이팀)</option>
+                    <option value="유재">유재 (❤️ 불끈이팀)</option>
+                    <option value="최리">최리 (❤️ 불끈이팀)</option>
+                </optgroup>
+            </select>
+        </div>
+    </div>
+
+    <div class="roulette-wrapper">
+        <div class="pointer"></div>
+        <canvas id="wheel" width="400" height="400"></canvas>
+        <div class="center-circle">🔮</div>
+    </div>
+
+    <div id="loading">운명을 기록하는 중…🔮</div>
+    <button class="btn-spin" id="spinBtn" onclick="spin()">
+        운명을 돌려라
+        <span class="btn-hint">결과는 별에게 맡겨…</span>
+    </button>
+</div>
+
+<div class="card">
+    <div class="record-title">✧ 당첨 이력 ✧</div>
+    <ul class="record-list" id="recordList">
+        <li>기록을 불러오는 중...</li>
+    </ul>
+</div>
+
+<script>
+    // insidemacau.html과 동일한 엑셀 간이 DB(Google Apps Script)로 기록 연결
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbwyzlkpeDPTwbziFoU9ikadhHS_xvCETkNuJ6E3BQA43gxg91dxKKqhCNRWxkl6EF5G/exec";
+
+    const canvas = document.getElementById('wheel');
+    const ctx = canvas.getContext('2d');
+    const userNameInput = document.getElementById('userName');
+
+    // 저장된 이름이 있으면 자동으로 채워줌 (/js/common.js)
+    if (typeof Wagle !== 'undefined' && Wagle.saved) {
+        const savedName = Wagle.saved.getName();
+        if (savedName && [...userNameInput.options].some(o => o.value === savedName)) {
+            userNameInput.value = savedName;
+        }
+    }
+
+    // 타로/금빛 톤에 맞춘 색 조합 (보라 ~ 금색)
+    // weight = 당첨 확률(%), draw = 룰렛에서 칸이 차지하는 시각적 크기(상대값)
+    // 면제권은 양쪽(반대편)에 15%씩 두 조각으로 배치, 친필싸인 칸은 살짝 더 작게(draw 0.6)
+    const slices = [
+        { name: "면제권", weight: 24, draw: 1, color1: "#7b4bc9", color2: "#3a1d6e" },
+        { name: "후기의 후기권", lines: ["후기의", "후기권"], weight: 30, draw: 1, color1: "#a66bff", color2: "#5a2fa0" },
+        { name: "원하는 책으로 온라인 프로", lines: ["원하는 책으로", "온라인 프로"], weight: 20, draw: 1, color1: "#d4af37", color2: "#9a7b1e" },
+        { name: "면제권", weight: 15, draw: 1, color1: "#7b4bc9", color2: "#3a1d6e" },
+        { name: "2027년 이벤트 혜택", weight: 10, draw: 1, color1: "#c9a84b", color2: "#6e4fa0" },
+        { name: "도스토예프스키 친필싸인", lines: ["도스토예프스키", "친필싸인"], weight: 1, draw: 0.8, color1: "#f0d98c", color2: "#d4af37" }
+    ];
+
+    const totalWeight = slices.reduce((sum, slice) => sum + slice.weight, 0);
+    const totalDraw = slices.reduce((sum, slice) => sum + slice.draw, 0);
+    let currentRotation = 0;
+    let isSpinning = false;
+
+    function drawWheel() {
+        const centerX = canvas.width / 2;
+        const centerY = canvas.height / 2;
+        const radius = canvas.width / 2;
+
+        let startAngle = -Math.PI / 2;
+
+        // 칸 크기는 draw값(시각 크기)으로 그린다. 당첨 확률(weight)과는 무관하게 계산.
+        for (let i = 0; i < slices.length; i++) {
+            const sliceAngle = (slices[i].draw / totalDraw) * 2 * Math.PI;
+            const endAngle = startAngle + sliceAngle;
+
+            ctx.beginPath();
+            ctx.moveTo(centerX, centerY);
+            ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+            ctx.closePath();
+
+            const midAngle = startAngle + sliceAngle / 2;
+            const edgeX = centerX + Math.cos(midAngle) * radius;
+            const edgeY = centerY + Math.sin(midAngle) * radius;
+
+            const gradient = ctx.createLinearGradient(centerX, centerY, edgeX, edgeY);
+            gradient.addColorStop(0, slices[i].color1);
+            gradient.addColorStop(1, slices[i].color2);
+
+            ctx.fillStyle = gradient;
+            ctx.fill();
+            ctx.lineWidth = 2;
+            ctx.strokeStyle = "rgba(212,175,55,0.9)"; // 금색 구분선
+            ctx.stroke();
+
+            ctx.save();
+            ctx.translate(centerX, centerY);
+            ctx.rotate(startAngle + sliceAngle / 2);
+            ctx.textAlign = "right";
+            ctx.fillStyle = "#fff8e6";
+
+            // 칸이 작은 조각(친필싸인 등)은 글자도 살짝 작게
+            const fontSize = slices[i].draw < 1 ? 15 : 19;
+            ctx.font = `bold ${fontSize}px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif`;
+            ctx.shadowColor = "rgba(0,0,0,0.7)";
+            ctx.shadowBlur = 4;
+
+            if (slices[i].lines) {
+                ctx.fillText(slices[i].lines[0], radius - 15, -8);
+                ctx.fillText(slices[i].lines[1], radius - 15, 15);
+            } else {
+                ctx.fillText(slices[i].name, radius - 15, 4);
+            }
+
+            ctx.restore();
+
+            startAngle = endAngle;
+        }
+    }
+    drawWheel();
+
+    // 돌린 사람들 기록 불러오기 (운명룰렛 전용 탭 / yearList 액션)
+    async function loadRecords() {
+        try {
+            const response = await fetch(`${GAS_URL}?action=yearList&t=${Date.now()}`, { cache: 'no-store' });
+            const records = await response.json();
+            const list = document.getElementById('recordList');
+            list.innerHTML = '';
+
+            if (!Array.isArray(records) || records.length === 0) {
+                list.innerHTML = '<li>아직 아무도 없습니다!</li>';
+                return;
+            }
+
+            records.forEach((r, index) => {
+                const li = document.createElement('li');
+                const icon = index === 0 ? '🔥' : '🎲';
+                li.innerHTML = `<span>${icon} ${r.name}</span> <span>${r.result || ''}</span>`;
+                list.appendChild(li);
+            });
+        } catch (error) {
+            console.error("기록 로드 실패:", error);
+            document.getElementById('recordList').innerHTML = '<li>기록을 불러오지 못했습니다.</li>';
+        }
+    }
+    loadRecords();
+
+    // 가중치 기반으로 당첨 조각을 클라이언트에서 결정
+    function pickWinningIndex() {
+        let r = Math.random() * totalWeight;
+        for (let i = 0; i < slices.length; i++) {
+            r -= slices[i].weight;
+            if (r < 0) return i;
+        }
+        return slices.length - 1;
+    }
+
+    function spin() {
+        if (isSpinning) return;
+
+        const rawName = userNameInput.value.trim();
+
+        if (!rawName) {
+            alert("이름을 먼저 선택해주세요!");
+            return;
+        }
+
+        const userName = rawName; // 하루용 룰렛이라 날짜 없이 이름만 기록
+
+        isSpinning = true;
+
+        const spinBtn = document.getElementById('spinBtn');
+        spinBtn.disabled = true;
+
+        // 팀은 optgroup 라벨에서 꺼내 저장 (insidemacau와 동일 형식)
+        if (typeof Wagle !== 'undefined' && Wagle.saved) {
+            const teamLabel = userNameInput.selectedOptions[0].parentElement.label || '';
+            Wagle.saved.save(teamLabel.split(' ').pop(), rawName);
+        }
+
+        const winningIndex = pickWinningIndex();
+        const prize = slices[winningIndex].name;
+        const baseSpins = 360 * 5;
+
+        // 결과를 엑셀 간이 DB(운명룰렛 탭)에 기록 (이름 + 상품명)
+        fetch(`${GAS_URL}?action=yearRecord&name=${encodeURIComponent(userName)}&result=${encodeURIComponent(prize)}`, { cache: 'no-store' })
+            .catch(err => console.error("기록 저장 실패:", err));
+
+        // 포인터(위쪽)가 가리킬, 당첨 조각 중앙까지의 각도 (draw값 기준 = 실제 그려진 위치)
+        let angleToCenter = 0;
+        for (let i = 0; i < winningIndex; i++) {
+            angleToCenter += (slices[i].draw / totalDraw) * 360;
+        }
+        angleToCenter += ((slices[winningIndex].draw / totalDraw) * 360) / 2;
+
+        // 직전 스핀의 잔여각이 남지 않도록 '절대 각도'를 먼저 구하고
+        // 최소 5바퀴를 채우는 만큼만 더해 앞으로 돌린다.
+        const targetAngle = ((-angleToCenter % 360) + 360) % 360;
+        const minRotation = currentRotation + baseSpins;
+        currentRotation = minRotation + (((targetAngle - minRotation) % 360) + 360) % 360;
+
+        canvas.style.transform = `rotate(${currentRotation}deg)`;
+
+        setTimeout(() => {
+            alert(`🔮 [${userName}]님의 운명이 정해졌습니다! [${prize}] 당첨!`);
+            loadRecords();
+            isSpinning = false;
+            spinBtn.disabled = false;
+        }, 4000);
+    }
+</script>
+
+</body>
+</html>
