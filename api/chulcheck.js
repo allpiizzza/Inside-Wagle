@@ -56,8 +56,9 @@ async function fetchSchema(headers, dbId) {
     return data.properties;
 }
 
-async function listNames(headers, dbId) {
-    const names = [];
+// 명단 전체 페이지 (이름순)
+async function queryAll(headers, dbId) {
+    const pages = [];
     let cursor = undefined;
     do {
         const response = await fetch(`https://api.notion.com/v1/databases/${dbId}/query`, {
@@ -71,13 +72,34 @@ async function listNames(headers, dbId) {
         });
         const data = await response.json();
         if (!response.ok) throw new Error(data.message || '출석체크 명단 조회 실패');
-        data.results.forEach((page) => {
-            const name = page.properties['와글러']?.title?.map((t) => t.plain_text).join('').trim();
-            if (name) names.push(name);
-        });
+        pages.push(...data.results);
         cursor = data.has_more ? data.next_cursor : undefined;
     } while (cursor);
-    return names;
+    return pages;
+}
+
+const pageName = (page) => page.properties['와글러']?.title?.map((t) => t.plain_text).join('').trim();
+
+async function listNames(headers, dbId) {
+    return (await queryAll(headers, dbId)).map(pageName).filter(Boolean);
+}
+
+// 목록 화면용: 한 사람의 7~12월 선택값 (보기 전용이라 옵션 목록은 안 보냄)
+function buildListRow(page) {
+    const props = page.properties;
+    const months = {};
+    MONTHS.forEach((m) => {
+        const month = {};
+        Object.entries(MULTI_KEYS).forEach(([key, propOf]) => { month[key] = selectedNames(props[propOf(m)]); });
+        month.chongdae = [1, 2, 3].filter((i) => props[chongdaeProp(m, i)]?.checkbox).length;
+        months[m] = month;
+    });
+    return {
+        name: pageName(page),
+        point: formulaValue(props['2026 포인트']),
+        exemptions: buildExemptions(props).owned.length,
+        months,
+    };
 }
 
 async function findPage(headers, dbId, name) {
@@ -159,6 +181,13 @@ export default async function handler(req, res) {
     try {
         if (req.method === 'GET') {
             const name = (req.query.name || '').trim();
+
+            // ---------- 목록 화면: 전체 와글러의 7~12월 현황 ----------
+            if (req.query.list) {
+                const pages = await queryAll(headers, CHULCHECK_DB_ID);
+                const rows = pages.filter(pageName).map(buildListRow);
+                return res.status(200).json({ months: MONTHS, rows });
+            }
 
             // ---------- 이름 없이 호출하면 명단만 ----------
             if (!name) {

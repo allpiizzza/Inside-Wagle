@@ -1,0 +1,491 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>출석체크 현황 - 인사이드 와글</title>
+    <link href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" rel="stylesheet">
+    <style>
+        /* chulcheck.html과 같은 톤, 표를 넓게 보여주려고 카드 폭만 넓힘 */
+        * {
+            box-sizing: border-box;
+            font-family: 'Pretendard', 'Noto Sans KR', sans-serif;
+        }
+        body {
+            background-color: #f1f5f9;
+            background-image:
+                radial-gradient(circle at 15% 10%, rgba(59, 130, 246, 0.18) 0, transparent 40%),
+                radial-gradient(circle at 90% 85%, rgba(16, 185, 129, 0.15) 0, transparent 40%),
+                radial-gradient(circle at 85% 15%, rgba(251, 146, 60, 0.12) 0, transparent 35%);
+            background-attachment: fixed;
+            color: #1e293b;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .container {
+            background-color: #ffffff;
+            width: 100%;
+            max-width: 960px;
+            border-radius: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
+        }
+
+        /* 헤더 배너 */
+        .hero {
+            position: relative;
+            padding: 18px 25px 30px;
+            background: linear-gradient(135deg, #2563eb 0%, #3b82f6 55%, #60a5fa 100%);
+            color: #ffffff;
+            overflow: hidden;
+        }
+        .hero::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: -1px;
+            height: 22px;
+            background: #ffffff;
+            border-radius: 50% 50% 0 0 / 100% 100% 0 0;
+        }
+        .back-link {
+            position: relative;
+            z-index: 1;
+            display: inline-block;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: rgba(255, 255, 255, 0.85);
+            text-decoration: none;
+            margin-bottom: 10px;
+        }
+        .back-link:hover { color: #ffffff; }
+        .hero-icon {
+            font-size: 2rem;
+            display: inline-block;
+            animation: bob 2.4s ease-in-out infinite;
+        }
+        @keyframes bob {
+            0%, 100% { transform: translateY(0) rotate(0); }
+            50% { transform: translateY(-4px) rotate(-6deg); }
+        }
+        .hero h1 {
+            margin: 4px 0 4px;
+            font-size: 1.5rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+        .bubble {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.15);
+        }
+        .bubble.b1 { width: 120px; height: 120px; top: -40px; right: -30px; }
+        .bubble.b2 { width: 60px; height: 60px; top: 50px; right: 70px; }
+        .bubble.b3 { width: 24px; height: 24px; top: 24px; right: 150px; }
+
+        .content { padding: 8px 25px 22px; }
+
+        /* 상단 요약 */
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin: 6px 0 14px;
+        }
+        .summary .item {
+            background: #eff6ff;
+            border: 1px solid #dbeafe;
+            border-radius: 14px;
+            padding: 10px 12px;
+        }
+        .summary .item.warn { background: #fef2f2; border-color: #fecaca; }
+        .summary .label { display: block; font-size: 0.72rem; font-weight: 700; color: #60a5fa; }
+        .summary .item.warn .label { color: #f87171; }
+        .summary .value { font-size: 1.25rem; font-weight: 800; color: #1e293b; }
+        .summary .value small { font-size: 0.75rem; font-weight: 700; color: #64748b; margin-left: 2px; }
+
+        /* 월 탭 + 정렬 */
+        .toolbar {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .month-tabs {
+            position: relative;
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            gap: 4px;
+            padding: 4px;
+            background: #f1f5f9;
+            border-radius: 14px;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+        .month-tabs::-webkit-scrollbar { display: none; }
+        .month-tab {
+            flex: 1 0 auto;
+            padding: 8px 10px;
+            border: none;
+            border-radius: 10px;
+            background: transparent;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #64748b;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .month-tab.active { background: #ffffff; color: #1d4ed8; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08); }
+        .sort {
+            flex-shrink: 0;
+            padding: 9px 10px;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            background: #ffffff;
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #475569;
+        }
+
+        /* 목록: 한 사람 = 한 줄. PC는 표, 폰은 카드 */
+        .list { display: flex; flex-direction: column; gap: 0; }
+        .row-head, .row-main {
+            display: grid;
+            grid-template-columns: minmax(90px, 1.4fr) repeat(6, minmax(52px, 1fr)) minmax(64px, 1fr) 24px;
+            align-items: center;
+            gap: 4px;
+        }
+        .row-head {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+            padding: 10px 12px;
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px 12px 0 0;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #64748b;
+            text-align: center;
+        }
+        .row-head > :first-child { text-align: left; }
+        .row {
+            border: 1px solid #e2e8f0;
+            border-top: none;
+            background: #ffffff;
+        }
+        .row:last-child { border-radius: 0 0 12px 12px; }
+        .row-main {
+            width: 100%;
+            padding: 11px 12px;
+            border: none;
+            background: transparent;
+            text-align: center;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: #1e293b;
+        }
+        .row-main:hover { background: #f8fafc; }
+        .row.has-penalty { background: #fff7f7; }
+        .row.has-penalty .row-main:hover { background: #fef2f2; }
+        .row .name { text-align: left; font-weight: 700; word-break: keep-all; }
+        .row .cell { font-weight: 700; }
+        .row .cell.zero { color: #cbd5e1; font-weight: 500; }
+        .row .cell.penalty:not(.zero) { color: #dc2626; }
+        .row .point { font-weight: 800; color: #1d4ed8; }
+        .row .caret { color: #94a3b8; font-size: 0.75rem; transition: transform 0.15s; }
+        .row.open .caret { transform: rotate(180deg); }
+        .row .ico, .row .unit { display: none; }
+
+        /* 펼치면 태그 이름이 주르륵 */
+        .detail {
+            display: none;
+            padding: 4px 12px 14px;
+            border-top: 1px dashed #e2e8f0;
+        }
+        .row.open .detail { display: block; }
+        .detail-group { display: flex; gap: 10px; padding-top: 10px; }
+        .detail-group .g-label {
+            flex: 0 0 118px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #64748b;
+            padding-top: 4px;
+        }
+        .tags { display: flex; flex-wrap: wrap; gap: 5px; flex: 1; min-width: 0; }
+        .tag {
+            padding: 4px 9px;
+            border-radius: 999px;
+            background: #eff6ff;
+            color: #1d4ed8;
+            font-size: 0.76rem;
+            font-weight: 600;
+        }
+        .tag .m { color: #93c5fd; margin-right: 3px; font-weight: 700; }
+        .detail-group.penalty .tag { background: #fee2e2; color: #b91c1c; }
+        .detail-group.penalty .tag .m { color: #fca5a5; }
+        .detail .none { font-size: 0.78rem; color: #cbd5e1; padding-top: 4px; }
+        .detail .go {
+            display: inline-block;
+            margin-top: 12px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            color: #2563eb;
+            text-decoration: none;
+        }
+
+        .legend { display: none; }
+        .status-msg {
+            font-size: 0.8rem;
+            color: #94a3b8;
+            text-align: center;
+            padding: 20px 0;
+        }
+        .status-msg:empty { display: none; }
+        .status-msg.error { color: #ef4444; }
+
+        @media (prefers-reduced-motion: reduce) {
+            .hero-icon { animation: none; }
+        }
+
+        /* 폰: 표 대신 카드 (이름·포인트 한 줄, 그 아래 0이 아닌 항목만 아이콘+숫자) */
+        @media (max-width: 680px) {
+            body { padding: 12px; }
+            .hero { padding-left: 18px; padding-right: 18px; }
+            .content { padding-left: 14px; padding-right: 14px; }
+            .summary .value { font-size: 1.1rem; }
+            .row-head { display: none; }
+            .sort { max-width: 96px; padding: 9px 6px; }
+            .legend {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 4px 10px;
+                margin: -2px 2px 10px;
+                font-size: 0.72rem;
+                color: #94a3b8;
+            }
+            .list { gap: 8px; }
+            .row, .row:last-child { border: 1px solid #e2e8f0; border-radius: 14px; }
+            .row.has-penalty { border-color: #fecaca; }
+            .row-main {
+                grid-template-columns: 1fr auto 18px;
+                grid-template-areas: "name point caret" "cells cells cells";
+                row-gap: 8px;
+                text-align: left;
+            }
+            .row .name { grid-area: name; }
+            .row .point { grid-area: point; }
+            .row .caret { grid-area: caret; text-align: right; }
+            .row .cells { grid-area: cells; display: flex; flex-wrap: wrap; gap: 6px; }
+            .row .cell {
+                padding: 3px 8px;
+                border-radius: 999px;
+                background: #f1f5f9;
+                font-size: 0.8rem;
+            }
+            .row .cell.zero { display: none; }
+            .row .cell.penalty:not(.zero) { background: #fee2e2; }
+            .row .ico, .row .unit { display: inline; }
+            .row .ico { margin-right: 3px; }
+            .row .unit { font-size: 0.72rem; color: #64748b; margin-left: 1px; }
+            .row .cells .empty-note { font-size: 0.75rem; color: #cbd5e1; }
+            .detail-group { flex-direction: column; gap: 6px; }
+            .detail-group .g-label { flex: none; padding-top: 0; }
+        }
+        /* PC 표에서는 칸들이 그리드의 열이 되도록 */
+        @media (min-width: 681px) {
+            .row .cells { display: contents; }
+            .row .cells .empty-note { display: none; }
+        }
+    </style>
+    <script src="/js/common.js"></script>
+</head>
+<body>
+
+<div class="container">
+    <header class="hero">
+        <span class="bubble b1"></span>
+        <span class="bubble b2"></span>
+        <span class="bubble b3"></span>
+        <a class="back-link" href="/chulcheck.html">← 출석체크로</a><br>
+        <span class="hero-icon">📋</span>
+        <h1>출석체크 현황</h1>
+    </header>
+
+    <main class="content">
+        <div class="summary" id="summary"></div>
+        <div class="toolbar">
+            <div class="month-tabs" id="monthTabs"></div>
+            <select class="sort" id="sort" onchange="render()">
+                <option value="name">이름순</option>
+                <option value="point">포인트순</option>
+                <option value="penalty">패널티순</option>
+            </select>
+        </div>
+        <div class="legend">🏠 오프 · 💻 온라인 · 🌟 활동 · 🚩 총대 · ⚠️ 패널티 · 🎫 면제권 (0개는 숨김)</div>
+        <div class="list" id="list"></div>
+        <div id="status" class="status-msg">현황 불러오는 중...</div>
+    </main>
+</div>
+
+<script>
+    const API_CHULCHECK = '/api/chulcheck';
+    const COLS = [
+        { key: 'offline', label: '오프', ico: '🏠', group: '🏠 오프라인 프로' },
+        { key: 'online', label: '온라인', ico: '💻', group: '💻 온라인 프로' },
+        { key: 'activity', label: '활동', ico: '🌟', group: '🌟 활동' },
+        { key: 'chongdae', label: '총대', ico: '🚩', group: '🚩 총대' },
+        { key: 'penalty', label: '패널티', ico: '⚠️', group: '⚠️ 패널티' },
+    ];
+
+    let data = null;
+    let currentMonth = 'all';
+    const openNames = new Set();
+
+    function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    async function load() {
+        const status = document.getElementById('status');
+        try {
+            const response = await fetch(`${API_CHULCHECK}?list=1`);
+            const json = await response.json();
+            if (!response.ok) throw new Error(json.error || '불러오기 실패');
+            data = json;
+            const m = new Date().getMonth() + 1;
+            if (data.months.includes(m)) currentMonth = m;
+            status.innerText = '';
+            render();
+        } catch (err) {
+            status.className = 'status-msg error';
+            status.innerText = err.message;
+        }
+    }
+
+    // 선택한 달(또는 전체)의 항목별 태그 목록. 전체일 땐 "8월 책밥1"처럼 달을 붙여서
+    function tagsOf(row, key) {
+        const months = currentMonth === 'all' ? data.months : [currentMonth];
+        const out = [];
+        months.forEach(m => {
+            const v = row.months[m][key];
+            if (key === 'chongdae') {
+                for (let i = 1; i <= v; i++) out.push({ m, text: `총대` });
+            } else {
+                v.forEach(text => out.push({ m, text }));
+            }
+        });
+        return out;
+    }
+
+    function render() {
+        document.getElementById('monthTabs').innerHTML =
+            [['all', '전체'], ...data.months.map(m => [m, `${m}월`])].map(([v, label]) => `
+                <button class="month-tab${v === currentMonth ? ' active' : ''}" onclick="selectMonth('${v}')">${label}</button>`).join('');
+        // 폰에서 선택한 달이 가려지지 않게 탭 줄만 옆으로 스크롤
+        const tabs = document.getElementById('monthTabs');
+        const active = tabs.querySelector('.active');
+        tabs.scrollLeft = active.offsetLeft - (tabs.clientWidth - active.offsetWidth) / 2;
+
+        const rows = data.rows.map(row => {
+            const counts = {};
+            COLS.forEach(c => { counts[c.key] = tagsOf(row, c.key).length; });
+            return { row, counts };
+        });
+
+        const sort = document.getElementById('sort').value;
+        rows.sort((a, b) => {
+            if (sort === 'point') return (b.row.point ?? -Infinity) - (a.row.point ?? -Infinity);
+            if (sort === 'penalty') return b.counts.penalty - a.counts.penalty;
+            return 0; // 이름순은 서버에서 이미 정렬돼 옴
+        });
+
+        const monthLabel = currentMonth === 'all' ? '7~12월' : `${currentMonth}월`;
+        const penaltyTotal = rows.reduce((s, r) => s + r.counts.penalty, 0);
+        const penaltyPeople = rows.filter(r => r.counts.penalty).length;
+        document.getElementById('summary').innerHTML = `
+            <div class="item"><span class="label">와글러</span><span class="value">${rows.length}<small>명</small></span></div>
+            <div class="item"><span class="label">${monthLabel} 활동</span><span class="value">${rows.reduce((s, r) => s + r.counts.activity, 0)}<small>건</small></span></div>
+            <div class="item warn"><span class="label">${monthLabel} 패널티</span><span class="value">${penaltyTotal}<small>건 · ${penaltyPeople}명</small></span></div>`;
+
+        const head = `
+            <div class="row-head">
+                <span>와글러</span>
+                ${COLS.map(c => `<span>${c.ico} ${c.label}</span>`).join('')}
+                <span>🎫 면제권</span><span>🏅 포인트</span><span></span>
+            </div>`;
+
+        const body = rows.map(({ row, counts }) => {
+            const open = openNames.has(row.name);
+            const cells = COLS.map(c => `
+                <span class="cell ${c.key}${counts[c.key] ? '' : ' zero'}"><span class="ico">${c.ico}</span>${counts[c.key] || '-'}</span>`).join('');
+            const exCell = `<span class="cell${row.exemptions ? '' : ' zero'}"><span class="ico">🎫</span>${row.exemptions || '-'}</span>`;
+            const anything = COLS.some(c => counts[c.key]) || row.exemptions;
+            return `
+                <div class="row${counts.penalty ? ' has-penalty' : ''}${open ? ' open' : ''}">
+                    <button class="row-main" onclick="toggleRow(this)" data-name="${escapeHtml(row.name)}">
+                        <span class="name">${escapeHtml(row.name)}</span>
+                        <span class="cells">${cells}${exCell}${anything ? '' : '<span class="empty-note">기록 없음</span>'}</span>
+                        <span class="point">${row.point == null ? '-' : Number(row.point).toLocaleString()}<span class="unit">점</span></span>
+                        <span class="caret">▼</span>
+                    </button>
+                    ${open ? renderDetail(row) : ''}
+                </div>`;
+        }).join('');
+
+        document.getElementById('list').innerHTML = head + body;
+    }
+
+    function renderDetail(row) {
+        const groups = COLS.map(c => {
+            const tags = tagsOf(row, c.key);
+            if (c.key === 'chongdae') {
+                // 총대는 이름이 없으니 달별 횟수로
+                const byMonth = {};
+                tags.forEach(t => { byMonth[t.m] = (byMonth[t.m] || 0) + 1; });
+                const html = Object.entries(byMonth).map(([m, n]) =>
+                    `<span class="tag">${currentMonth === 'all' ? `<span class="m">${m}월</span>` : ''}${n}회</span>`).join('');
+                return groupHtml(c, html);
+            }
+            const html = tags.map(t =>
+                `<span class="tag">${currentMonth === 'all' ? `<span class="m">${t.m}월</span>` : ''}${escapeHtml(t.text)}</span>`).join('');
+            return groupHtml(c, html);
+        }).join('');
+        return `
+            <div class="detail">
+                ${groups}
+                <a class="go" href="/chulcheck.html?name=${encodeURIComponent(row.name)}">✏️ ${escapeHtml(row.name)} 기록 수정하러 가기 →</a>
+            </div>`;
+    }
+
+    function groupHtml(c, html) {
+        return `
+            <div class="detail-group ${c.key}">
+                <span class="g-label">${c.group}</span>
+                ${html ? `<div class="tags">${html}</div>` : '<span class="none">없음</span>'}
+            </div>`;
+    }
+
+    function toggleRow(btn) {
+        const name = btn.dataset.name;
+        openNames.has(name) ? openNames.delete(name) : openNames.add(name);
+        render();
+    }
+
+    function selectMonth(v) {
+        currentMonth = v === 'all' ? 'all' : Number(v);
+        render();
+    }
+
+    load();
+</script>
+
+</body>
+</html>

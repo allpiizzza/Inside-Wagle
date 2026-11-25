@@ -65,6 +65,23 @@
             margin-bottom: 10px;
         }
         .back-link:hover { color: #ffffff; }
+        /* 우측 상단: 전체 현황 목록으로 */
+        .list-link {
+            position: absolute;
+            z-index: 1;
+            top: 16px;
+            right: 18px;
+            padding: 6px 12px;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.2);
+            border: 1px solid rgba(255, 255, 255, 0.35);
+            color: #ffffff;
+            font-size: 0.78rem;
+            font-weight: 700;
+            text-decoration: none;
+            backdrop-filter: blur(4px);
+        }
+        .list-link:hover { background: rgba(255, 255, 255, 0.3); }
         .hero-icon {
             font-size: 2rem;
             display: inline-block;
@@ -412,6 +429,7 @@
         <span class="bubble b2"></span>
         <span class="bubble b3"></span>
         <a class="back-link" href="https://for-wagle.vercel.app/">← 메인으로</a><br>
+        <a class="list-link" href="/chulcheckList.html">📋 전체 현황</a>
         <span class="hero-icon">✅</span>
         <h1>출석체크</h1>
     </header>
@@ -476,8 +494,9 @@
             select.innerHTML = '<option value="" disabled selected>이름을 선택하세요</option>' +
                 data.names.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('');
 
-            // 저장된 이름이 있으면 자동으로 채워줌 (/js/common.js)
-            const savedName = Wagle.saved.getName();
+            // 목록 화면에서 ?name=으로 넘어왔으면 그 사람, 아니면 저장된 이름을 자동으로 채워줌 (/js/common.js)
+            const urlName = new URLSearchParams(location.search).get('name');
+            const savedName = data.names.includes(urlName) ? urlName : Wagle.saved.getName();
             if (data.names.includes(savedName)) {
                 select.value = savedName;
                 loadRecord();
