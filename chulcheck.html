@@ -246,6 +246,13 @@
         .section.box .opt-group .group-name { font-size: 0.78rem; }
         .section.box .chip.on { background: #2563eb; }
         .section.box .opt-groups { background: #ffffff; }
+        /* 패널티는 빨간 톤으로 구분 (이름이 길어서 묶음 이름 칸도 넓게) */
+        .section.box.penalty { background: #fef2f2; border-color: #fecaca; }
+        .section.box.penalty .chip.on { background: #dc2626; border-color: #dc2626; }
+        .section.box.penalty .chip:hover { border-color: #fca5a5; }
+        .section.box.penalty .section-head .count { color: #b91c1c; background: #fee2e2; }
+        .section.box.penalty .opt-group .group-name { flex-basis: 132px; }
+        .section.box.penalty .opt-group.has-on .group-name { color: #b91c1c; }
         .section-head .count {
             font-size: 0.72rem;
             font-weight: 800;
@@ -435,6 +442,7 @@
         { key: 'offline', label: '🏠 오프라인 프로 포인트' },
         { key: 'online', label: '💻 온라인 프로 포인트' },
         { key: 'activity', label: '🌟 활동 포인트' },
+        { key: 'penalty', label: '⚠️ 패널티', bottom: true }, // 점수에 안 들어감, 총대 아래 맨 하단에 따로
     ];
 
     let record = null;   // 서버에서 받은 원본 (저장 성공 시 갱신)
@@ -545,15 +553,16 @@
         saveBtn.style.display = '';
 
         const month = draft[currentMonth];
-        let html = SECTIONS.map(({ key, label }) => {
+        const renderSection = ({ key, label }) => {
             const sec = month[key];
             if (!sec) return '';
             return `
-                <div class="section box">
+                <div class="section box ${key}">
                     <div class="section-head"><span>${label}</span><span class="count">${sec.selected.length}개</span></div>
                     ${sec.options.length ? renderOptions(key, sec) : '<span class="empty">선택할 수 있는 항목이 없어요</span>'}
                 </div>`;
-        }).join('');
+        };
+        let html = SECTIONS.filter(s => !s.bottom).map(renderSection).join('');
 
         if (month.chongdae.some(v => v !== null)) {
             html += `
@@ -569,6 +578,8 @@
                     </div>
                 </div>`;
         }
+
+        html += SECTIONS.filter(s => s.bottom).map(renderSection).join('');
 
         document.getElementById('sections').innerHTML = html;
         saveBtn.disabled = !isDirty(currentMonth);
@@ -699,6 +710,7 @@
                     offline: month.offline?.selected,
                     online: month.online?.selected,
                     activity: month.activity?.selected,
+                    penalty: month.penalty?.selected,
                     chongdae: month.chongdae,
                 }),
             });
