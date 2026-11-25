@@ -1,8 +1,10 @@
 // api/chulcheck.js
 // Vercel Serverless Function - 2026 출석체크 / 하반기 DB 기록
-// 7~12월 각 달의 "오프라인/온라인 프로 포인트", "활동 포인트"(다중 선택)와 "총대 (1)~(3)"(체크박스)을
+// 7~12월 각 달의 "오프라인/온라인 프로 포인트", "활동 포인트", "패널티"(다중 선택)와 "총대 (1)~(3)"(체크박스)을
 // 본인이 직접 켜고 끄는 용도. 다중 선택은 DB에 이미 있는 옵션 중에서만 고를 수 있음
 // 면제권은 "2026 포인트 면제권"/"받았어요 면제권"에 있는 걸 사용하면 "사용했어요 면제권"으로 옮김
+// "n월 패널티"(다중 선택)는 점수에 안 들어가는 별도 속성. 아래 PENALTY_TAGS는 DB에 옵션이 없어도
+// 고를 수 있고, 저장할 때 Notion이 옵션을 새로 만들어줌
 
 const NOTION_VERSION = '2022-06-28';
 const ALLOWED_ORIGIN = '*';
@@ -12,7 +14,24 @@ const MULTI_KEYS = {
     offline: (m) => `${m}월 오프라인 프로 포인트`,
     online: (m) => `${m}월 온라인 프로 포인트`,
     activity: (m) => `${m}월 활동 포인트`,
+    penalty: (m) => `${m}월 패널티`,
 };
+
+// 지각/결석은 한 달에 3번까지 (번호를 붙여야 다중 선택에 여러 개 넣을 수 있음), 나머지는 1번
+const PENALTY_TAGS = [
+    ...[1, 2, 3].map((i) => `온라인프로 지각/결석 ${i}`),
+    ...[1, 2, 3].map((i) => `오프라인 지각/결석 ${i}`),
+    '두달에1회 오프 활동 미달',
+    '두달에1회 온라인 활동 미달',
+    '책목록안올림',
+    '책권수/책후기미달',
+];
+// DB에 옵션이 없어도 고를 수 있는 항목 (Notion이 저장할 때 새 옵션을 만듦)
+const EXTRA_OPTIONS = { penalty: PENALTY_TAGS };
+const optionsOf = (key, def) => [...new Set([
+    ...(EXTRA_OPTIONS[key] || []),
+    ...def.multi_select.options.map((o) => o.name),
+])];
 const chongdaeProp = (m, i) => `${m}월 총대 (${i})`; // 괄호 앞 공백 주의
 
 const EXEMPTION_FROM = { point: '2026 포인트 면제권', received: '받았어요 면제권' };
@@ -86,7 +105,7 @@ function buildMonth(schema, props, m) {
             return;
         }
         month[key] = {
-            options: def.multi_select.options.map((o) => o.name),
+            options: optionsOf(key, def),
             selected: (props[propName]?.multi_select || []).map((o) => o.name),
         };
     });
@@ -206,7 +225,7 @@ export default async function handler(req, res) {
 
         // ---------- 한 달치 기록 저장 (보낸 상태 그대로 덮어씀 → 끄면 삭제) ----------
         if (req.method === 'POST') {
-            const { name, month, offline, online, activity, chongdae } = req.body || {};
+            const { name, month, offline, online, activity, penalty, chongdae } = req.body || {};
             const m = parseInt(month, 10);
             if (!name || !name.trim()) return res.status(400).json({ error: '와글러 이름을 선택해주세요.' });
             if (!MONTHS.includes(m)) return res.status(400).json({ error: '7~12월 중에서 선택해주세요.' });
@@ -218,14 +237,14 @@ export default async function handler(req, res) {
             if (!page) return res.status(404).json({ error: '출석체크 명단에 없는 이름이에요.' });
 
             const properties = {};
-            const values = { offline, online, activity };
+            const values = { offline, online, activity, penalty };
             for (const [key, propOf] of Object.entries(MULTI_KEYS)) {
                 const propName = propOf(m);
                 const def = schema[propName];
                 if (!def || def.type !== 'multi_select' || !Array.isArray(values[key])) continue;
 
-                // 없는 옵션을 보내면 Notion이 새 옵션을 만들어버리므로 여기서 막음
-                const allowed = new Set(def.multi_select.options.map((o) => o.name));
+                // 없는 옵션을 보내면 Notion이 새 옵션을 만들어버리므로 여기서 막음 (패널티 태그는 예외)
+                const allowed = new Set(optionsOf(key, def));
                 const unknown = values[key].filter((v) => !allowed.has(v));
                 if (unknown.length) {
                     return res.status(400).json({ error: `'${propName}'에 없는 항목이에요: ${unknown.join(', ')}` });
